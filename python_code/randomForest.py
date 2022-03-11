@@ -166,7 +166,7 @@ def printNodes(nodeCount, thresholds, features, nodesLeftChildren, nodesRightChi
         for x in node:
             print(x, file = open(text,"a"), end = "")
         print("", file = open(text,"a"))
-    print("", file = open(text,"a"))
+    print("x", file = open(text,"a"))
 
 #truncates the txt data in which the information are written.
 file = open("random-forest.txt","r+")
