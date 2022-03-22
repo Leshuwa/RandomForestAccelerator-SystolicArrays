@@ -7,7 +7,7 @@ use IEEE.STD_LOGIC_1164.ALL;
 entity RF_tb is
 end RF_tb;
 
-architecture Behavioral of RF_tb is
+architecture test of RF_tb is
     
     --the testbench uses the Random-Forest_accelerator within its architecture
     component Random_Forest_accelerator
@@ -38,11 +38,11 @@ begin
     sepal_width <= "0000";
     petal_length <= "1101";
     petal_width <= "0010";
-    wait for 50ns;
+    wait for 50 ns;
     wait;
     end process;
     
-end Behavioral;
+end test;
 
 
 

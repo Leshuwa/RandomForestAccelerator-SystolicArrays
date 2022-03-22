@@ -79,12 +79,12 @@ begin
      instance_node_1 : node port map(all_info => allinf0, feature_to_compare => f1, next_node => nextNode1, current_node => currentNode);
   
      instance_mem_2 : DT_memory port map(tree_num => tree_number, currentNode => nextNode1 , allinf => allinf1); 
-     f2 <= getFeature(allinf1(15 downto 12)) after 1ns;
+     f2 <= getFeature(allinf1(15 downto 12)) after 1 ns;
      instance_node_2 : node port map(all_info => allinf1, feature_to_compare => f2, next_node => nextNode2, current_node => nextNode1);
      
 
      instance_mem_3 : DT_memory port map(tree_num => tree_number, currentNode => nextNode2, allinf => allinf2); 
-     f3 <= getFeature(allinf2(15 downto 12)) after 2ns;
+     f3 <= getFeature(allinf2(15 downto 12)) after 2 ns;
      instance_node_3 : node port map(all_info => allinf2, feature_to_compare => f3, next_node => nextNode3, current_node => nextNode2);
      
      

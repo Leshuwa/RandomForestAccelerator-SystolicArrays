@@ -4,6 +4,7 @@ use std.textio.all;
 use ieee.std_logic_textio.all;
 use ieee.numeric_std.all;
 
+
 entity DT_memory is
   Port (
         tree_num : in integer;
@@ -18,9 +19,8 @@ architecture Behavioral of DT_memory is
 --and store the data stream in the array. there are a total of 10 data chunks within the .data file
 --each one of the 10 data chunks can hold 1-15 20-bit data streams each representing information of a node.
     type mem is array(0 to 9, 0 to 14) of std_logic_vector(19 downto 0);
-   
     impure function InitRamFromFile (RamFileName : in string) return mem is
-    file RamFile : text is in RamFileName;
+    file RamFile : text open read_mode is RamFileName;
     variable RamFileLine : line;
     variable RAM : mem;
     begin
@@ -38,7 +38,7 @@ architecture Behavioral of DT_memory is
    end function;
    
    --function InitRamFromFile called and the return value stored in signal RAM
-   signal RAM : mem := InitRamFromFile("/home/marji/Desktop/Fachprojekt/DT_Data/randomForest.data");
+   signal RAM : mem := InitRamFromFile("random-forest.txt");
 begin
     -- data stream of each node is fetched.
     allinf <= RAM(tree_num, to_integer(unsigned(currentNode)));

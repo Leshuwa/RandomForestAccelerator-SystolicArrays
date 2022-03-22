@@ -43,15 +43,15 @@ begin
      maxFreq := "0000";
      mostFreq := "1111";
      --embedded for loop used to go through all the stored results in the array while keeping their frequency at hand.
-     for i in 0 to 9 loop
+     for q in 0 to 9 loop
         countFreq := "0001";
-        for j in 0 to 9 loop
-            if((tempresults(i) = tempresults(j)) and (i/=j)) then
+        for r in 0 to 9 loop
+            if((tempresults(q) = tempresults(r)) and (q/=r)) then
                 countFreq := std_logic_vector(to_unsigned((to_integer(unsigned(countFreq)) + 1), countFreq'length));
             end if; 
             if (to_integer(unsigned(maxFreq)) < to_integer(unsigned(countFreq))) then
                 maxFreq := countFreq;
-                mostFreq := tempresults(i);
+                mostFreq := tempresults(q);
             end if;
          end loop;  
      end loop;
