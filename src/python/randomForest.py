@@ -169,14 +169,14 @@ def printNodes(nodeCount, thresholds, features, nodesLeftChildren, nodesRightChi
     print("x", file = open(text,"a"))
 
 #truncates the txt data in which the information are written.
-file = open("random-forest.txt","r+")
+file = open("../../res/forest.dat","r+")
 file.truncate(0)
 file.close()
 
 #calls on the function printNodes for all the trees in the random forest.
 def writeNodeData():
     for i in range (10):
-        printNodes(estimatorArray[i].tree_.node_count, thresholdArray[i], featuresArray[i], lcArray[i], rcArray[i], classArray[i], "random-forest.txt")
+        printNodes(estimatorArray[i].tree_.node_count, thresholdArray[i], featuresArray[i], lcArray[i], rcArray[i], classArray[i], "../../res/forest.dat")
 
 writeNodeData()
 
@@ -202,16 +202,16 @@ def printTrees():
     graph7 = graphviz.Source(dot_data7)
     graph8 = graphviz.Source(dot_data8)
     graph9 = graphviz.Source(dot_data9)
-    graph0.render("tree0")
-    graph1.render("tree1")
-    graph2.render("tree2")
-    graph3.render("tree3")
-    graph4.render("tree4")
-    graph5.render("tree5")
-    graph6.render("tree6")
-    graph7.render("tree7")
-    graph8.render("tree8")
-    graph9.render("tree9")
+    graph0.render("../../res/tree/0")
+    graph1.render("../../res/tree/1")
+    graph2.render("../../res/tree/2")
+    graph3.render("../../res/tree/3")
+    graph4.render("../../res/tree/4")
+    graph5.render("../../res/tree/5")
+    graph6.render("../../res/tree/6")
+    graph7.render("../../res/tree/7")
+    graph8.render("../../res/tree/8")
+    graph9.render("../../res/tree/9")
  
 printTrees()
 
