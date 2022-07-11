@@ -22,9 +22,16 @@
 
 ## Compile and Run Tests
 
-Execute `runtests.sh` to automatically compile the project and run all tests.
+Execute `runtests.sh` in the project's root directory to compile all VHDL sources and to simulate their testbenches.
 
     $ ./runtests.sh
+
+This automatically generates VCD files for each VHDL file and its associated testbench, including required dependencies.
+You can then view testbenches in GTKWave using
+
+    $ gtkwave "out/VHDL_FILE.vcd"
+
+where `VHDL_FILE` corresponds to the name of either VHDL file in the project.
 
 
 ## References
