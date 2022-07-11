@@ -21,8 +21,8 @@
 #===============================================================================
 
 # Expects VHDL-files (*.vhdl) from anywhere within specified source directory.
-#  First file will be selected as main testbench.
-SRCS=("randomForest" "majorityVote" "decisionTreeMemory" "node" "comparator")
+#  Listed files descend the dependency tree in given order.
+SRCS=("randomForest" "majorityVote" "decisionTree" "node" "comparator" "decisionTreeMemory")
 
 # Sources root directory
 SRCSDIR="src/vhdl"
@@ -40,16 +40,38 @@ WORKDIR="out"
 
 runGHDL()
 {
-    # Run specified command
-    local output="$(ghdl $1)"
+    # Run GHDL command with given arguments.
+    local output="$(ghdl $1 2>&1)"
     local result=$?
 
-    # Print command execution status, aborting upon failure
-    if [ $result -eq 0 ] #&& [ -z "$output" ]
+    # Print command execution status.
+    if [ $result -ne 0 ]
     then
-        printf "OK\n"
+        printf "ERROR ($result)\n"
+	elif [ ! -z "$output" ]
+	then
+		printf "WARNING\n"
     else
-        printf "ERROR ($result):\n$output\n"
+        printf "OK\n"
+    fi
+    
+    # Optionally print command output with indentation.
+    if [ ! -z "$output" ]
+    then
+        # Split output on newline character
+        IFS=$'\n'
+        lines=(${output//;/ })
+        unset IFS
+        
+        for line in "${lines[@]}"
+        do
+            printf "    $line\n"
+        done
+    fi
+    
+    # Exit upon failure.
+    if [ $result -ne 0 ]
+    then
         exit $result
     fi
 }
@@ -67,64 +89,52 @@ then
 fi
 
 # Run syntax check and analysis on all files.
-printf "Syntax check and analysis..\n"
+printf "\n"
+printf "  ===========================\n"
+printf "  == Building VHDL sources ==\n"
+printf "  ===========================\n"
+printf "\n"
+
 for (( i = ${#SRCS[@]} - 1; i >= 0; --i ))
 do
+	# Display current file
+	printf "\n"
+	printf "File \"$SRCSDIR/${SRCS[$i]}.vhdl\"\n"
+
+    # Gather file dependencies
     files="$SRCSDIR/${SRCS[$i]}.vhdl"
-    
     for (( j = i + 1; j < ${#SRCS[@]}; j++ ))
     do
         files="$files $SRCSDIR/${SRCS[$j]}.vhdl"
     done
     
-    printf "    Checking  \"${SRCS[$i]}\".. "
-    runGHDL "-s -fsynopsys --workdir=$WORKDIR --std=08 $files $SRCSDIR/${SRCS[$i]}_tb.vhdl"
-    printf "    Analysing \"${SRCS[$i]}\".. "
-    runGHDL "-a -fsynopsys --workdir=$WORKDIR --std=08 $files $SRCSDIR/${SRCS[$i]}_tb.vhdl"
+    # Syntax check
+    printf "  Syntax check.. "
+    runGHDL "-s --workdir=$WORKDIR --std=08 $files $SRCSDIR/${SRCS[$i]}_tb.vhdl"
+    
+    # Analysis
+    printf "  Analysis..     "
+    runGHDL "-a --workdir=$WORKDIR --std=08 $files $SRCSDIR/${SRCS[$i]}_tb.vhdl"
+	
+	# Build
+	printf "  Building..     "
+	runGHDL "-e --workdir=$WORKDIR --std=08 -o $WORKDIR/${SRCS[i]}_tb ${SRCS[i]}_tb"
+	
+	# Dump VCD testbench
+	printf "  Dumping VCD..  "
+	cd "$WORKDIR"
+	runGHDL "-r --workdir=. --std=08  ${SRCS[i]}_tb --vcd=${SRCS[i]}.vcd"
+	cd ".."
 done
 
-# Build testbench.
-printf "Building.. "
-runGHDL "-m -fsynopsys --workdir=$WORKDIR --std=08 ${SRCS[0]}_tb"
+printf "\n"
+printf "  ====================\n"
+printf "  == BUILD COMPLETE ==\n"
+printf "  ====================\n"
+printf "\n"
 
-# Dump VCD testbench.
-printf "Dumping VCD.. "
-runGHDL "-r -fsynopsys --workdir=$WORKDIR --std=08 ${SRCS[0]}_tb --vcd=$WORKDIR/testbench.vcd"
-
-#  # Run syntax checks for all files.
-#  printf "Checking syntax..\n"
-#  
-#  for file in "${SRCS[@]}"
-#  do
-#      printf "    $file.. "
-#      runGHDL "-s -fsynopsys --workdir=$WORKDIR --std=08 $SRCSDIR/${file}.vhdl $SRCSDIR/${file}_tb.vhdl"
-#  done
-#
-#  # Run analysis next.
-#  printf "Analysing..\n"
-#  for file in "${SRCS[@]}"
-#  do
-#       printf "    $file.. "
-#       runGHDL "-a -fsynopsys --workdir=$WORKDIR --std=08 $SRCSDIR/${file}.vhdl $SRCSDIR/${file}_tb.vhdl"
-#  done
-#
-#  # Build testbenches.
-#  printf "Building..\n"
-#  for file in "${SRCS[@]}"
-#  do
-#      printf "    $file.. "
-#      runGHDL "-m -fsynopsys --workdir=$WORKDIR --std=08 ${file}_tb"
-#  done
-#
-#  # Dump VCD testbench.
-#  printf "Dumping VCD..\n"
-#  for file in "${SRCS[@]}"
-#  do
-#      printf "    $file.. "
-#      runGHDL "-r -fsynopsys --workdir=$WORKDIR --std=08 ${file}_tb --vcd=$WORKDIR/testbench.vcd"
-#  done
-
-# Upon reaching this point, we have been successful. Start GtkWave.
-printf "Starting GtkWave..\n"
-gtkwave "$WORKDIR/testbench.vcd"
-
+# Suggest testbench execution in GTKWave
+printf "You can now view testbenches in GTKWave by running e.g.\n"
+printf "\n"
+printf "    gtkwave \"$WORKDIR/${SRCS[0]}.vcd\"\n"
+printf "\n"

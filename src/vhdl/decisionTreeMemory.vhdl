@@ -45,7 +45,8 @@ architecture arch of DecisionTreeMemory is
    end function;
 
    -- function InitRamFromFile called and the return value stored in signal RAM
-   signal RAM : mem := InitRamFromFile("../../res/forest.dat");
+   -- Note: The data file path is relative to the location of the GHDL elaboration unit!
+   signal RAM : mem := InitRamFromFile("../res/forest.dat");
 begin
     -- data stream of each node is fetched.
     allinf <= RAM(tree_num, to_integer(unsigned(currentNode)));
