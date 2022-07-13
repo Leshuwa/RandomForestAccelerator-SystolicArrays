@@ -2,9 +2,9 @@
 #
 #===============================================================================
 #
-#           FILE:   runtest.sh
+#           FILE:   runtests.sh
 #
-#          USAGE:   runtest.sh
+#          USAGE:   runtests.sh
 #
 #    DESCRIPTION:   Runs GHDL compilation and simulation procedures for preset
 #                    VHDL source files and opens GtkWave for inspection of the
@@ -14,9 +14,9 @@
 #
 #         AUTHOR:   Immanuel Dick (immanuel.dick@tu-dortmund.de)
 #        COMPANY:   TU Dortmund, Dortmund
-#        VERSION:   1.0
+#        VERSION:   1.2
 #        CREATED:   2022/06/08 13:45:30
-#       REVISION:   2022/06/08 13:45:30
+#       REVISION:   2022/07/11 19:02:00
 # 
 #===============================================================================
 

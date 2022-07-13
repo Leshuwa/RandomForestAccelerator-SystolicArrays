@@ -33,6 +33,8 @@ You can then view testbenches in GTKWave using
 
 where `VHDL_FILE` corresponds to the name of either VHDL file in the project.
 
+<sub>Note: `runtests.sh` build script was tested on Windows 10 using MSYS and MinGW 64-Bit.</sub>
+
 
 ## References
 
