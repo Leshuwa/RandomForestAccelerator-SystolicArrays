@@ -22,7 +22,7 @@
 
 # Expects VHDL-files (*.vhdl) from anywhere within specified source directory.
 #  Listed files descend the dependency tree in given order.
-SRCS=("randomForest" "majorityVote" "decisionTree" "node" "comparator" "decisionTreeMemory")
+SRCS=("randomForest" "majorityVote" "decisionTree" "node" "comparator_n_bit" "comparator_1_bit" "decisionTreeMemory")
 
 # Sources root directory
 SRCSDIR="src/vhdl"

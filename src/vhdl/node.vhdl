@@ -1,6 +1,6 @@
 library IEEE;
 use IEEE.numeric_std.all;
-use IEEE.std_logic_1164.ALL;
+use IEEE.std_logic_1164.all;
 
 
 
@@ -24,49 +24,52 @@ end Node;
 
 architecture arch of Node is
 
-    component Comparator is
+    component Comparator_n_Bit is
+		generic(
+			INPUT_BITS : integer := 4
+		);
         port(
-            feature    : in  std_logic_vector(3 downto 0);
-            threshold  : in  std_logic_vector(3 downto 0);
-            greater    : out std_logic;
-            less_equal : out std_logic
+			in_threshold : in  std_logic_vector(INPUT_BITS-1 downto 0);
+			in_value     : in  std_logic_vector(INPUT_BITS-1 downto 0);
+			out_equal    : out std_logic;
+			out_greater  : out std_logic;
+			out_less     : out std_logic
         );
     end component;
 
-    signal greater_than    : std_logic;
-    signal less_than_equal : std_logic;
-    
-    signal lc : std_logic_vector(3 downto 0);
-    signal rc : std_logic_vector(3 downto 0);
-    signal th : std_logic_vector(3 downto 0);
-    signal ft : std_logic_vector(3 downto 0);
+    signal childL    : std_logic_vector(3 downto 0);
+    signal childR    : std_logic_vector(3 downto 0);
+	signal feature   : std_logic_vector(3 downto 0);
+    signal threshold : std_logic_vector(3 downto 0);
+	
+	signal greater : std_logic;
 
 begin
-    -- this is summary of lc,rc,th,ft address within all_info. each address corrosponds to a value
-    lc <= all_info(11 downto 8);
-    rc <= all_info(7 downto 4);
-    th <= all_info(19 downto 16);
-    ft <= all_info(15 downto 12);
+    -- Read 4-Bit fields from loaded node information.
+	threshold <= all_info(19 downto 16);
+    feature   <= all_info(15 downto 12);
+    childL    <= all_info(11 downto 8);
+	childR    <= all_info(7 downto 4);
 
-    -- the comparator is given the feature, threshold and determines whether its greater than or lessthan/equal.
-    comparator1 : Comparator port map(
-        feature    => feature_to_compare,
-        threshold  => th,
-        greater    => greater_than,
-        less_equal => less_than_equal
+    -- Passing feature and threshold to the comparator; we only care about the 'greater'-bit.
+    comparator0 : Comparator_n_Bit
+	port map(
+        in_threshold => threshold,
+        in_value     => feature,
+        out_greater  => greater
     );
 
-    --in summary if feature was greater than threshold next_node will be the right child, and if not next_node = left child
-    process(less_than_equal, greater_than)
+	-- Select right child as next node if the feature exceeded its threshold, the left child otherwise.
+    process(greater)
     begin
-        if (ft /= "1111") then
-              if (less_than_equal = '1') then
-                     next_node <= lc;
-              elsif (greater_than = '1') then
-                     next_node <= rc;
-              end if;
+        if (feature /= "1111") then
+			if (greater = '1') then
+				next_node <= childR;
+			else
+				next_node <= childL;
+			end if;
         else
-               next_node <= current_node;
+			next_node <= current_node;
         end if;
     end process;
 
