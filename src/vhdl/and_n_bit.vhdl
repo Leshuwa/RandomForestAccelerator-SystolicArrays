@@ -13,8 +13,8 @@ use IEEE.std_logic_1164.all;
 --
 -- @out out_vector - Output bit array.
 --
--- @runtimeOwn      n + 1
--- @runtimeTotal    n + 1
+-- @complexity    n + 1
+-- @runtime       2
 --
 --------------------------------------------------------------------------------
 

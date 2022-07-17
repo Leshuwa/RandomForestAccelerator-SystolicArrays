@@ -15,8 +15,8 @@ use IEEE.std_logic_1164.all;
 -- @out out_greater - '1' iff value > threshold; '0' else.
 -- @out out_less    - '1' iff value < threshold; '0' else.
 --
--- @runtimeOwn      4
--- @runtimeTotal    4
+-- @complexity    7
+-- @runtime       4
 --
 --------------------------------------------------------------------------------
 

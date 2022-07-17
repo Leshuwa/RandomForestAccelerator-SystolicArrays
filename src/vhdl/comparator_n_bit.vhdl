@@ -15,8 +15,8 @@ use IEEE.std_logic_1164.all;
 -- @out out_greater - '1' iff value > threshold; '0' else.
 -- @out out_less    - '1' iff value < threshold; '0' else.
 --
--- @runtimeOwn      5 * (n - 1)
--- @runtimeTotal    9n - 5  =  (n * (4)) + (5 * (n - 1))
+-- @complexity    9n - 5  =  (5 * (n - 1)) + (n * 4)
+-- @runtime       2n + 2  =  (2 * (n - 1)) + (4)
 --
 --------------------------------------------------------------------------------
 

@@ -22,8 +22,8 @@ use work.rf_types.all;
 -- @out out_nextAddress  - Next node address, either relevant child node's
 --							address, or in_nodeAddress if this is a leaf.
 --
--- @runtimeOwn      2n + 2
--- @runtimeTotal    23n - 5  =  (2 * (9n - 5)) + (3 * (n + 1)) + (2n + 2)
+-- @complexity    23n - 5  =  (2 * (9n - 5)) + (3 * (n + 1)) + (2n + 2)
+-- @runtime        2n + 7  =  (2n + 2)       + (2)           + (3)
 --
 --------------------------------------------------------------------------------
 
