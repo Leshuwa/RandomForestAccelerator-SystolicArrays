@@ -1,9 +1,13 @@
 library IEEE;
-library STD;
 use IEEE.numeric_std.all;
 use IEEE.std_logic_1164.ALL;
 use IEEE.std_logic_textio.all;
+
+library STD;
 use STD.textio.all;
+
+library work;
+use work.rf_types.all;
 
 
 -- 10 instances of the DT component are called within the Random_Forest_accelerator design, each given a unique tree_number and the same sl, sw, pl, pw
@@ -28,12 +32,15 @@ end DecisionTree;
 architecture arch of DecisionTree is
 
     component Node is
-        port(
-            all_info           : in  std_logic_vector(19 downto 0);
-            feature_to_compare : in  std_logic_vector(3 downto 0);
-            current_node       : in  std_logic_vector(3 downto 0);
-            next_node          : out std_logic_vector(3 downto 0)
-        );
+		port(
+			in_compareFeature : in  rf_types_value;
+			in_nodeAddress    : in  rf_types_address;
+			in_nodeChildL     : in  rf_types_address;
+			in_nodeChildR     : in  rf_types_address;
+			in_nodeFeature    : in  rf_types_value;
+			in_nodeThreshold  : in  rf_types_value;
+			out_nextAddress   : out rf_types_address
+		);
     end component;
 
     component DecisionTreeMemory is
@@ -95,10 +102,13 @@ begin
     f1 <= getFeature(allinf0(15 downto 12));
 
     node1 : Node port map(
-        all_info           => allinf0,
-        feature_to_compare => f1,
-        next_node          => nextNode1,
-        current_node       => currentNode
+		in_compareFeature => f1,
+		in_nodeAddress    => currentNode,
+		in_nodeChildL     => allinf0(11 downto  8),
+		in_nodeChildR     => allinf0( 7 downto  4),
+		in_nodeFeature    => allinf0(15 downto 12),
+		in_nodeThreshold  => allinf0(19 downto 16),
+		out_nextAddress   => nextNode1
     );
     decisionTreeMemory2 : DecisionTreeMemory port map(
         tree_num    => tree_number,
@@ -109,10 +119,13 @@ begin
     f2 <= getFeature(allinf1(15 downto 12)) after 1 ns;
 
     node2 : Node port map(
-        all_info           => allinf1,
-        feature_to_compare => f2,
-        next_node          => nextNode2,
-        current_node       => nextNode1
+        in_compareFeature => f2,
+		in_nodeAddress    => nextNode1,
+		in_nodeChildL     => allinf1(11 downto  8),
+		in_nodeChildR     => allinf1( 7 downto  4),
+		in_nodeFeature    => allinf1(15 downto 12),
+		in_nodeThreshold  => allinf1(19 downto 16),
+		out_nextAddress   => nextNode2
     );
     decisionTreeMemory3 : DecisionTreeMemory port map(
         tree_num    => tree_number,
@@ -123,10 +136,13 @@ begin
     f3 <= getFeature(allinf2(15 downto 12)) after 2 ns;
 
     node3 : Node port map(
-        all_info           => allinf2,
-        feature_to_compare => f3,
-        next_node          => nextNode3,
-        current_node       => nextNode2
+        in_compareFeature => f3,
+		in_nodeAddress    => nextNode2,
+		in_nodeChildL     => allinf2(11 downto  8),
+		in_nodeChildR     => allinf2( 7 downto  4),
+		in_nodeFeature    => allinf2(15 downto 12),
+		in_nodeThreshold  => allinf2(19 downto 16),
+		out_nextAddress   => nextNode3
     );
     decisionTreeMemory4 : DecisionTreeMemory port map(
         tree_num    => tree_number,
