@@ -1,28 +1,63 @@
 library IEEE;
-use IEEE.numeric_std.all;
 use IEEE.std_logic_1164.all;
 
+library work;
+use work.rf_types.all;
 
 
--- node calculates the next node, and returns the address of the left/right child of current node.
--- node has:
--- 3 input --> all_info(20 bit data of all node information containing threshold, feature, lc, rc, and class
---             feature_to_compare: given from the DT design and is used by the comparator.
---             current_node
--- 1 output --> next_node: returns next_node to continue iteration through decision tree
+
+--------------------------------------------------------------------------------
+--
+-- Takes a feature value for classification and determines from supplied node
+--  data which child to select next by comparing given feature against this
+--  node's threshold.
+--
+-- @in in_compareFeature - Feature to compare and classify.
+-- @in in_nodeAddress    - Currently selected node; may be returned as result.
+-- @in in_nodeChildL     - Address of the node's left child.
+-- @in in_nodeChildR     - Address of the node's right child.
+-- @in in_nodeFeature    - Feature value of this node.
+-- @in in_nodeThreshold  - This node's feature threshold.
+--
+-- @out out_nextAddress  - Next node address, either relevant child node's
+--							address, or in_nodeAddress if this is a leaf.
+--
+-- @runtimeOwn      2n + 2
+-- @runtimeTotal    23n - 5  =  (2 * (9n - 5)) + (3 * (n + 1)) + (2n + 2)
+--
+--------------------------------------------------------------------------------
 
 entity Node is
-    port(
-        all_info           : in  std_logic_vector(19 downto 0);
-        feature_to_compare : in  std_logic_vector(3 downto 0);
-        current_node       : in  std_logic_vector(3 downto 0);
-        next_node          : out std_logic_vector(3 downto 0)
+	port(
+		in_compareFeature : in  rf_types_value;
+		in_nodeAddress    : in  rf_types_address;
+		in_nodeChildL     : in  rf_types_address;
+		in_nodeChildR     : in  rf_types_address;
+		in_nodeFeature    : in  rf_types_value;
+		in_nodeThreshold  : in  rf_types_value;
+        out_nextAddress   : out rf_types_address
     );
 end Node;
 
 
 
+--------------------------------------------------------------------------------
+-- Architecture implementation.
+--------------------------------------------------------------------------------
+
 architecture arch of Node is
+
+	component And_n_Bit is
+		generic(
+			INPUT_BITS : integer := 4
+		);
+		port(
+			in_cond0   : in  std_logic;
+			in_cond1   : in  std_logic;
+			in_vector  : in  std_logic_vector(INPUT_BITS-1 downto 0);
+			out_vector : out std_logic_vector(INPUT_BITS-1 downto 0)
+		);
+	end component;
 
     component Comparator_n_Bit is
 		generic(
@@ -36,41 +71,82 @@ architecture arch of Node is
 			out_less     : out std_logic
         );
     end component;
-
-    signal childL    : std_logic_vector(3 downto 0);
-    signal childR    : std_logic_vector(3 downto 0);
-	signal feature   : std_logic_vector(3 downto 0);
-    signal threshold : std_logic_vector(3 downto 0);
 	
-	signal greater : std_logic;
+	signal nodeAddress_and : rf_types_address;
+	signal nodeChildL_and  : rf_types_address;
+	signal nodeChildR_and  : rf_types_address;
+	
+	signal isGreater  : std_logic;
+	signal isLeafNode : std_logic;
+	signal isTreeNode : std_logic;
 
 begin
-    -- Read 4-Bit fields from loaded node information.
-	threshold <= all_info(19 downto 16);
-    feature   <= all_info(15 downto 12);
-    childL    <= all_info(11 downto 8);
-	childR    <= all_info(7 downto 4);
 
     -- Passing feature and threshold to the comparator; we only care about the 'greater'-bit.
-    comparator0 : Comparator_n_Bit
+    comparator_n_bit_0 : Comparator_n_Bit
+	generic map(
+		INPUT_BITS => VALUE_BITS
+	)
 	port map(
-        in_threshold => threshold,
-        in_value     => feature,
-        out_greater  => greater
+        in_threshold => in_nodeThreshold,
+        in_value     => in_compareFeature,
+        out_greater  => isGreater
+    );
+	
+	-- Determine whether current node data is that of a leaf.
+	comparator_n_bit_1 : Comparator_n_Bit
+	generic map(
+		INPUT_BITS => VALUE_BITS
+	)
+	port map(
+        in_threshold => (others => '1'),
+        in_value     => in_nodeFeature,
+        out_equal    => isLeafNode
+    );
+	
+	-- Invert isLeafNode for later usage; saves a NOT-gate.
+	isTreeNode <= NOT isLeafNode;
+	
+	-- Create AND-gates for node addresses.
+	and_n_bit_0 : And_n_Bit
+	generic map(
+		INPUT_BITS => ADDRESS_BITS
+	)
+    port map(
+		in_cond0   => isLeafNode,
+		in_cond1   => '1',
+        in_vector  => in_nodeAddress,
+		out_vector => nodeAddress_and
+	);
+	
+	and_n_bit_1 : And_n_Bit
+	generic map(
+		INPUT_BITS => ADDRESS_BITS
+	)
+    port map(
+		in_cond0   => isTreeNode,
+		in_cond1   => (NOT isGreater),
+        in_vector  => in_nodeChildL,
+		out_vector => nodeChildL_and
+    );
+	
+	and_n_bit_2 : And_n_Bit
+	generic map(
+		INPUT_BITS => ADDRESS_BITS
+	)
+    port map(
+		in_cond0   => isTreeNode,
+		in_cond1   => isGreater,
+        in_vector  => in_nodeChildR,
+		out_vector => nodeChildR_and
     );
 
-	-- Select right child as next node if the feature exceeded its threshold, the left child otherwise.
-    process(greater)
-    begin
-        if (feature /= "1111") then
-			if (greater = '1') then
-				next_node <= childR;
-			else
-				next_node <= childL;
-			end if;
-        else
-			next_node <= current_node;
-        end if;
-    end process;
+	-- Connect output bits via multi-OR-gates.
+	genOrGates:
+	for i in ADDRESS_BITS-1 downto 0 generate
+
+		out_nextAddress(i) <= (nodeAddress_and(i) OR nodeChildL_and(i) OR nodeChildR_and(i));
+		
+	end generate genOrGates;
 
 end arch;
