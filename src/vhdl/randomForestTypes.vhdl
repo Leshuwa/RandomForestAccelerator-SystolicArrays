@@ -5,10 +5,15 @@ use IEEE.std_logic_1164.all;
 
 package rf_types is
 
+	type std_logic_matrix is array (natural range <>) of std_logic_vector;
+
 	-- Constant definitions to configure the design's dimensions.
-	constant ADDRESS_BITS : integer := 4;
-	constant CLASS_BITS   : integer := 4;
-	constant VALUE_BITS   : integer := 4;
+	constant ADDRESS_BITS    : integer := 4;
+	constant CLASS_BITS_LOG2 : integer := 2;
+	constant VALUE_BITS      : integer := 4;
+	
+	-- Feature class bits; directly dependent on its log-2 exponent.
+	constant CLASS_BITS     : integer := (2 ** CLASS_BITS_LOG2);
 	
 	-- Total number of node data bits, automatically calculated.
 	constant NODE_DATA_BITS : integer := ((2 * VALUE_BITS) + (2 * ADDRESS_BITS) + CLASS_BITS);
