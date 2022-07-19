@@ -49,11 +49,11 @@ architecture arch of Node is
 
 	component And_n_Bit is
 		generic(
+			CONDITIONS : integer := 2;
 			INPUT_BITS : integer := 4
 		);
 		port(
-			in_cond0   : in  std_logic;
-			in_cond1   : in  std_logic;
+			in_conds   : in  std_logic_vector(CONDITIONS-1 downto 0);
 			in_vector  : in  std_logic_vector(INPUT_BITS-1 downto 0);
 			out_vector : out std_logic_vector(INPUT_BITS-1 downto 0)
 		);
@@ -72,13 +72,17 @@ architecture arch of Node is
         );
     end component;
 	
-	signal nodeAddress_and : rf_types_address;
-	signal nodeChildL_and  : rf_types_address;
-	signal nodeChildR_and  : rf_types_address;
+	signal in_conds_0 : std_logic_vector(0 downto 0);
+	signal in_conds_1 : std_logic_vector(1 downto 0);
+	signal in_conds_2 : std_logic_vector(1 downto 0);
 	
 	signal isGreater  : std_logic;
 	signal isLeafNode : std_logic;
 	signal isTreeNode : std_logic;
+	
+	signal nodeAddress_and : rf_types_address;
+	signal nodeChildL_and  : rf_types_address;
+	signal nodeChildR_and  : rf_types_address;
 
 begin
 
@@ -104,39 +108,45 @@ begin
         out_equal    => isLeafNode
     );
 	
-	-- Invert isLeafNode for later usage; saves a NOT-gate.
+	-- Prepare AND-gate condition inputs.
 	isTreeNode <= NOT isLeafNode;
+	
+	in_conds_0(0) <= isLeafNode;
+	in_conds_1(0) <= isTreeNode;
+	in_conds_1(1) <= (NOT isGreater);
+	in_conds_2(0) <= isTreeNode;
+	in_conds_2(1) <= isGreater;
 	
 	-- Create AND-gates for node addresses.
 	and_n_bit_0 : And_n_Bit
 	generic map(
+		CONDITIONS => 1,
 		INPUT_BITS => ADDRESS_BITS
 	)
     port map(
-		in_cond0   => isLeafNode,
-		in_cond1   => '1',
+		in_conds   => in_conds_0,
         in_vector  => in_nodeAddress,
 		out_vector => nodeAddress_and
 	);
 	
 	and_n_bit_1 : And_n_Bit
 	generic map(
+		CONDITIONS => 2,
 		INPUT_BITS => ADDRESS_BITS
 	)
     port map(
-		in_cond0   => isTreeNode,
-		in_cond1   => (NOT isGreater),
+		in_conds   => in_conds_1,
         in_vector  => in_nodeChildL,
 		out_vector => nodeChildL_and
     );
 	
 	and_n_bit_2 : And_n_Bit
 	generic map(
+		CONDITIONS => 2,
 		INPUT_BITS => ADDRESS_BITS
 	)
     port map(
-		in_cond0   => isTreeNode,
-		in_cond1   => isGreater,
+		in_conds   => in_conds_2,
         in_vector  => in_nodeChildR,
 		out_vector => nodeChildR_and
     );
