@@ -1,22 +1,36 @@
 library IEEE;
 use IEEE.std_logic_1164.all;
 
-library work;
-use work.rf_types.all;
 
 
-
+--------------------------------------------------------------------------------
+--
+-- Decision Tree class calculation node.
+--
 --------------------------------------------------------------------------------
 --
 -- Takes a feature value for classification and determines from supplied node
 --  data which child to select next by comparing given feature against this
 --  node's threshold.
 --
+-- Returns this node's own address if it is a leaf (i.e. its feature is 0xFF..F).
+-- Returns the right child node address if given input feature value is truly
+--  greater than this node's threshold.
+-- Returns the left child node address otherwise.
+--
+--------------------------------------------------------------------------------
+--
+-- @generic ADDRESS_BITS    - Bits per node address.
+-- @generic FEATURE_BITS    - Bit count for class entity features.
+-- @generic FEATURE_ID_BITS - Bits per feature index/ identifier.
+--
 -- @in in_compareFeature - Feature to compare and classify.
 -- @in in_nodeAddress    - Currently selected node; may be returned as result.
 -- @in in_nodeChildL     - Address of the node's left child.
 -- @in in_nodeChildR     - Address of the node's right child.
--- @in in_nodeFeature    - Feature value of this node.
+-- @in in_nodeFeatureID  - Index within the associated decision tree's feature
+--                          set; determines which feature is used for the next
+--                          node's comparison. Set to 0xFF..F if this is a leaf.
 -- @in in_nodeThreshold  - This node's feature threshold.
 --
 -- @out out_nextAddress  - Next node address, either relevant child node's
@@ -28,15 +42,20 @@ use work.rf_types.all;
 --------------------------------------------------------------------------------
 
 entity Node is
-	port(
-		in_compareFeature : in  rf_types_value;
-		in_nodeAddress    : in  rf_types_address;
-		in_nodeChildL     : in  rf_types_address;
-		in_nodeChildR     : in  rf_types_address;
-		in_nodeFeature    : in  rf_types_value;
-		in_nodeThreshold  : in  rf_types_value;
-        out_nextAddress   : out rf_types_address
-    );
+		generic(
+			ADDRESS_BITS    : integer := 4;
+			FEATURE_BITS    : integer := 4;
+			FEATURE_ID_BITS : integer := 4
+		);
+		port(
+			in_compareFeature : in  std_logic_vector(   FEATURE_BITS-1 downto 0);
+			in_nodeAddress    : in  std_logic_vector(   ADDRESS_BITS-1 downto 0);
+			in_nodeChildL     : in  std_logic_vector(   ADDRESS_BITS-1 downto 0);
+			in_nodeChildR     : in  std_logic_vector(   ADDRESS_BITS-1 downto 0);
+			in_nodeFeatureID  : in  std_logic_vector(FEATURE_ID_BITS-1 downto 0);
+			in_nodeThreshold  : in  std_logic_vector(   FEATURE_BITS-1 downto 0);
+			out_nextAddress   : out std_logic_vector(   ADDRESS_BITS-1 downto 0)
+		);
 end Node;
 
 
@@ -80,16 +99,16 @@ architecture arch of Node is
 	signal isLeafNode : std_logic;
 	signal isTreeNode : std_logic;
 	
-	signal nodeAddress_and : rf_types_address;
-	signal nodeChildL_and  : rf_types_address;
-	signal nodeChildR_and  : rf_types_address;
+	signal nodeAddress_and : std_logic_vector(ADDRESS_BITS-1 downto 0);
+	signal nodeChildL_and  : std_logic_vector(ADDRESS_BITS-1 downto 0);
+	signal nodeChildR_and  : std_logic_vector(ADDRESS_BITS-1 downto 0);
 
 begin
 
-    -- Passing feature and threshold to the comparator; we only care about the 'greater'-bit.
+    -- Comparing feature and threshold, only caring about the 'greater'-bit.
     comparator_n_bit_0 : Comparator_n_Bit
 	generic map(
-		INPUT_BITS => VALUE_BITS
+		INPUT_BITS => FEATURE_BITS
 	)
 	port map(
         in_threshold => in_nodeThreshold,
@@ -100,11 +119,11 @@ begin
 	-- Determine whether current node data is that of a leaf.
 	comparator_n_bit_1 : Comparator_n_Bit
 	generic map(
-		INPUT_BITS => VALUE_BITS
+		INPUT_BITS => FEATURE_ID_BITS
 	)
 	port map(
         in_threshold => (others => '1'),
-        in_value     => in_nodeFeature,
+        in_value     => in_nodeFeatureID,
         out_equal    => isLeafNode
     );
 	
