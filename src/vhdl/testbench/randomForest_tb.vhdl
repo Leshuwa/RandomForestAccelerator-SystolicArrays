@@ -1,54 +1,87 @@
 library IEEE;
-use IEEE.std_logic_1164.ALL;
+use IEEE.numeric_std.all;
+use IEEE.std_logic_1164.all;
+
+library work;
+use work.rf_types.all;
 
 
-
--- this is the testbench of the random-forest-accelerator design. which is used to test
--- and simulate the random-forest-accelerator with user-given values.
 
 entity RandomForest_tb is
 end RandomForest_tb;
 
 
 
+--------------------------------------------------------------------------------
+-- Testbench implementation.
+--------------------------------------------------------------------------------
+
 architecture test of RandomForest_tb is
 
-    -- the testbench uses the Random-Forest_accelerator within its architecture
     component RandomForest
-        port(
-            sepal_length : in  std_logic_vector(3 downto 0);
-            sepal_width  : in  std_logic_vector(3 downto 0);
-            petal_length : in  std_logic_vector(3 downto 0);
-            petal_width  : in  std_logic_vector(3 downto 0);
-            class_out    : out std_logic_vector(3 downto 0) -- limited to "0000" (setosa), "0001" (versicolor), and "0010" (virginica)
-        );
+		generic(
+			CLASS_LABEL_BITS  : integer := 4;
+			FEATURE_BITS      : integer := 4;
+			FEATURE_ID_BITS   : integer := 4;
+			FEATURE_ID_COUNT  : integer := 4;
+			NODE_ADDRESS_BITS : integer := 4;
+			TREE_COUNT        : integer := 10;
+			TREE_DEPTH        : integer := 3
+		);
+		port(
+			in_clock    : in  std_logic;
+			in_reset    : in  std_logic;
+			in_features : in  std_logic_matrix(0 to FEATURE_ID_COUNT-1)(FEATURE_BITS-1 downto 0);
+			out_ready   : out std_logic;
+			out_class   : out std_logic_vector(CLASS_LABEL_BITS-1 downto 0)
+		);
     end component;
 
-    signal sepal_length : std_logic_vector(3 downto 0);
-    signal sepal_width  : std_logic_vector(3 downto 0);
-    signal petal_length : std_logic_vector(3 downto 0);
-    signal petal_width  : std_logic_vector(3 downto 0);
-    signal class_out    : std_logic_vector(3 downto 0);
+    signal in_clock_1    : std_logic;
+	signal in_reset_1    : std_logic;
+	signal in_features_1 : std_logic_matrix(0 to (4)-1)((4)-1 downto 0);
+	signal out_ready_1   : std_logic;
+	signal out_class_1   : std_logic_vector((4)-1 downto 0);
 
 begin
 
-    randomForest1 : RandomForest port map(
-        sepal_length => sepal_length,
-        sepal_width  => sepal_width,
-        petal_length => petal_length,
-        petal_width  => petal_width,
-        class_out    => class_out
+    randomForest_1 : RandomForest
+    port map(
+		in_clock    => in_clock_1,
+		in_reset    => in_reset_1,
+		in_features => in_features_1,
+		out_ready   => out_ready_1,
+		out_class   => out_class_1
     );
 
-    -- values of sepal_length, sepal_width, petal_length, petal_width givin within the process below:
-    -- please give test-inputs one input at a time as shown below
-    -- (design not configured to test multiple test-inputs in a row)
     process begin
-        sepal_length <= "0011";
-        sepal_width  <= "0000";
-        petal_length <= "1101";
-        petal_width  <= "0010";
-        wait for 50 ns;
+	
+        in_clock_1 <= '0';
+		in_reset_1 <= '0';
+		
+		-- Reset
+		in_clock_1 <= '1';
+		in_reset_1 <= '1';
+		wait for 0.5 ns;
+		in_clock_1 <= '0';
+		wait for 0.5 ns;
+		
+		-- First test; data supplied by last year's group
+		in_features_1(0) <= "0011"; -- Sepal length
+        in_features_1(1) <= "0000"; -- Sepal width
+        in_features_1(2) <= "1101"; -- Petal length
+        in_features_1(3) <= "0010"; -- Petal width
+		in_reset_1 <= '0';
+		
+		while (out_ready_1 = '0') loop
+			in_clock_1 <= '1';
+			wait for 0.5 ns;
+			in_clock_1 <= '0';
+			wait for 0.5 ns;
+		end loop;
+		
+		wait for 1.0 ns;
+		
         wait;
     end process;
 
