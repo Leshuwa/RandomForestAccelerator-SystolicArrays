@@ -1,155 +1,212 @@
 library IEEE;
 use IEEE.numeric_std.all;
-use IEEE.std_logic_1164.ALL;
-use IEEE.std_logic_textio.all;
-
-library STD;
-use STD.textio.all;
+use IEEE.std_logic_1164.all;
 
 library work;
 use work.rf_types.all;
 
 
--- 10 instances of the DT component are called within the Random_Forest_accelerator design, each given a unique tree_number and the same sl, sw, pl, pw
--- values to calculate their decisions simultaniously. this design shows how each decision is calculated in more detail.
--- entity of design has:
--- 5 inputs: tree_number --> used for memory access, sl, sw, pl, pw --> used for calculating decision
--- 1 output: class_out --> contains final decision of decision tree.
+
+--------------------------------------------------------------------------------
+--
+-- Multi-nodal Decision Tree algorithm implementation.
+--
+--------------------------------------------------------------------------------
+--
+-- Each decision tree has a root node with address 0x00..0 from which the
+--  classification process begins. Starting with the root node, each tree node
+--  compares the currently selected feature with its own threshold and selects
+--  either its left or right child as successor or (if it is a leaf) returns
+--  its assigned (=stored) class label as result.
+--
+-- Feature count can be declared independently from its bit count declaration.
+-- However, behaviour is undefined for cases where the node count is less than
+--  two to the power of the feature bit count.
+--
+--------------------------------------------------------------------------------
+--
+-- @generic CLASS_LABEL_BITS  - Number of bits a single class label has.
+-- @generic FEATURE_BITS      - Bit count for class entity features.
+-- @generic FEATURE_ID_BITS   - Bits per feature index/ identifier.
+-- @generic FEATURE_ID_COUNT  - Number of used features (1..2^FEATURE_ID_BITS)
+-- @generic NODE_ADDRESS_BITS - Bits per node address.
+-- @generic TREE_COUNT        - Number of trees per random forest.
+-- @generic TREE_DEPTH        - Levels in a single decision tree.
+--
+-- @in in_treeIndex - Current index of this decision tree for memory reference.
+-- @in in_features  - Input matrix containing a feature set for classification.
+-- @in in_reset     - Set to '1' to reset the entire decision tree.
+--
+-- @out out_ready   - Raised to '1' once computation has finished.
+-- @out out_class   - Suggested class label for given feature set.
+--
+--------------------------------------------------------------------------------
 
 entity DecisionTree is
+	generic(
+		CLASS_LABEL_BITS  : integer := 4;
+		FEATURE_BITS      : integer := 4;
+		FEATURE_ID_BITS   : integer := 4;
+		FEATURE_ID_COUNT  : integer := 4;
+		NODE_ADDRESS_BITS : integer := 4;
+		TREE_COUNT        : integer := 10;
+		TREE_DEPTH        : integer := 3
+	);
     port(
-        tree_number  : in  integer;
-        sepal_length : in  std_logic_vector(3 downto 0);
-        sepal_width  : in  std_logic_vector(3 downto 0);
-        petal_length : in  std_logic_vector(3 downto 0);
-        petal_width  : in  std_logic_vector(3 downto 0);
-        class_out    : out std_logic_vector(3 downto 0)
+        in_treeIndex : in  integer;
+		in_features  : in  std_logic_matrix(0 to FEATURE_ID_COUNT-1)(FEATURE_BITS-1 downto 0);
+		out_ready    : out std_logic;
+        out_class    : out std_logic_vector(CLASS_LABEL_BITS-1 downto 0)
     );
 end DecisionTree;
 
 
 
-architecture arch of DecisionTree is
+--------------------------------------------------------------------------------
+-- Architecture implementation.
+--------------------------------------------------------------------------------
 
-    component Node is
+architecture arch of DecisionTree is
+    
+    -----------------------------
+    --  Component declaration  --
+    -----------------------------
+
+    component DecisionTreeMemory is
+		generic(
+			ADDRESS_BITS      : integer := 4;
+			CLASS_BITS        : integer := 4;
+			FEATURE_BITS      : integer := 4;
+			FEATURE_ID_BITS   : integer := 4;
+			FOREST_TREE_COUNT : integer := 10;
+			PATH_TO_ROM_FILE  : string  := "../res/forest.dat"
+		);
 		port(
-			in_compareFeature : in  rf_types_value;
-			in_nodeAddress    : in  rf_types_address;
-			in_nodeChildL     : in  rf_types_address;
-			in_nodeChildR     : in  rf_types_address;
-			in_nodeFeature    : in  rf_types_value;
-			in_nodeThreshold  : in  rf_types_value;
-			out_nextAddress   : out rf_types_address
+			in_treeIndex   : in  integer;
+			in_nodeAddress : in  std_logic_vector(   ADDRESS_BITS-1 downto 0);
+			out_childL     : out std_logic_vector(   FEATURE_BITS-1 downto 0);
+			out_childR     : out std_logic_vector(   FEATURE_BITS-1 downto 0);
+			out_class      : out std_logic_vector(     CLASS_BITS-1 downto 0);
+			out_featureID  : out std_logic_vector(FEATURE_ID_BITS-1 downto 0);
+			out_threshold  : out std_logic_vector(   FEATURE_BITS-1 downto 0)
 		);
     end component;
 
-    component DecisionTreeMemory is
-        port(
-            tree_num    : in  integer;
-            currentNode : in  std_logic_vector;
-            allinf      : out std_logic_vector(19 downto 0)
-        );
+    component Node is
+		generic(
+			ADDRESS_BITS    : integer := 4;
+			FEATURE_BITS    : integer := 4;
+			FEATURE_ID_BITS : integer := 4
+		);
+		port(
+			in_compareFeature : in  std_logic_vector(   FEATURE_BITS-1 downto 0);
+			in_nodeAddress    : in  std_logic_vector(   ADDRESS_BITS-1 downto 0);
+			in_nodeChildL     : in  std_logic_vector(   ADDRESS_BITS-1 downto 0);
+			in_nodeChildR     : in  std_logic_vector(   ADDRESS_BITS-1 downto 0);
+			in_nodeFeatureID  : in  std_logic_vector(FEATURE_ID_BITS-1 downto 0);
+			in_nodeThreshold  : in  std_logic_vector(   FEATURE_BITS-1 downto 0);
+			out_nextAddress   : out std_logic_vector(   ADDRESS_BITS-1 downto 0)
+		);
     end component;
+    
+    
+    --------------------------
+    --  Signal declaration  --
+    --------------------------
 
-    signal f1 : std_logic_vector(3 downto 0);
-    signal f2 : std_logic_vector(3 downto 0);
-    signal f3 : std_logic_vector(3 downto 0);
-
-    signal allinf0 : std_logic_vector(19 downto 0);
-    signal allinf1 : std_logic_vector(19 downto 0);
-    signal allinf2 : std_logic_vector(19 downto 0);
-    signal allinf3 : std_logic_vector(19 downto 0);
-
-    signal currentNode : std_logic_vector(3 downto 0);
-    signal nextNode1   : std_logic_vector(3 downto 0);
-    signal nextNode2   : std_logic_vector(3 downto 0);
-    signal nextNode3   : std_logic_vector(3 downto 0);
-
-    -- takes one input and returns the feature to be used within the comparator to calculate the decision.
-    -- whenever feature given within parameter is:
-    --  0000 => sepal length must be used as feature to compare
-    --  0001 => sepal width must be used as feature to compare
-    --  0010 => petal length must be used as feature to compare
-    --  0011 => petal width must be used as feature to compare
-    impure function getFeature (a : std_logic_vector) return std_logic_vector is
-    begin
-        if (a = "0000") then
-            return sepal_length;
-        elsif (a = "0001") then
-            return sepal_width;
-        elsif (a = "0010") then
-            return petal_length;
-        elsif (a = "0011") then
-            return petal_width;
-        else
-            return "0000";
-        end if;
-    end getFeature;
+	signal curr_compareFeature : std_logic_matrix(0 to TREE_DEPTH-1)(     FEATURE_BITS-1 downto 0);
+	signal curr_nodeAddress    : std_logic_matrix(0 to TREE_DEPTH-1)(NODE_ADDRESS_BITS-1 downto 0) := (others => (others => '0'));
+	signal curr_nodeChildL     : std_logic_matrix(0 to TREE_DEPTH-1)(NODE_ADDRESS_BITS-1 downto 0);
+	signal curr_nodeChildR     : std_logic_matrix(0 to TREE_DEPTH-1)(NODE_ADDRESS_BITS-1 downto 0);
+	signal curr_nodeClass      : std_logic_matrix(0 to TREE_DEPTH-1)( CLASS_LABEL_BITS-1 downto 0);
+	signal curr_nodeFeatureID  : std_logic_matrix(0 to TREE_DEPTH-1)(  FEATURE_ID_BITS-1 downto 0) := (others => (others => '0'));
+	signal curr_nodeThreshold  : std_logic_matrix(0 to TREE_DEPTH-1)(     FEATURE_BITS-1 downto 0);
 
 
 begin
-    -- the design must always start with current node 0(root node) which has first address in data file
-    -- 20 bit-data of each node is fetched using the 4 instances of memory component (DT_memory), next node is given as current node after 1st iteration
-    -- 3 instances of the component node are created since there is a max_depth of 3, each instance returns the next node(either left or right child)
-    -- at the end we read the class from the last node the design has reached
-    currentNode <= "0000";
-    decisionTreeMemory1 : DecisionTreeMemory port map(
-        tree_num    => tree_number,
-        currentNode => currentNode,
-        allinf      => allinf0
-    );
 
-    f1 <= getFeature(allinf0(15 downto 12));
-
-    node1 : Node port map(
-		in_compareFeature => f1,
-		in_nodeAddress    => currentNode,
-		in_nodeChildL     => allinf0(11 downto  8),
-		in_nodeChildR     => allinf0( 7 downto  4),
-		in_nodeFeature    => allinf0(15 downto 12),
-		in_nodeThreshold  => allinf0(19 downto 16),
-		out_nextAddress   => nextNode1
-    );
-    decisionTreeMemory2 : DecisionTreeMemory port map(
-        tree_num    => tree_number,
-        currentNode => nextNode1,
-        allinf      => allinf1
-    );
-
-    f2 <= getFeature(allinf1(15 downto 12)) after 1 ns;
-
-    node2 : Node port map(
-        in_compareFeature => f2,
-		in_nodeAddress    => nextNode1,
-		in_nodeChildL     => allinf1(11 downto  8),
-		in_nodeChildR     => allinf1( 7 downto  4),
-		in_nodeFeature    => allinf1(15 downto 12),
-		in_nodeThreshold  => allinf1(19 downto 16),
-		out_nextAddress   => nextNode2
-    );
-    decisionTreeMemory3 : DecisionTreeMemory port map(
-        tree_num    => tree_number,
-        currentNode => nextNode2,
-        allinf      => allinf2
-    );
-
-    f3 <= getFeature(allinf2(15 downto 12)) after 2 ns;
-
-    node3 : Node port map(
-        in_compareFeature => f3,
-		in_nodeAddress    => nextNode2,
-		in_nodeChildL     => allinf2(11 downto  8),
-		in_nodeChildR     => allinf2( 7 downto  4),
-		in_nodeFeature    => allinf2(15 downto 12),
-		in_nodeThreshold  => allinf2(19 downto 16),
-		out_nextAddress   => nextNode3
-    );
-    decisionTreeMemory4 : DecisionTreeMemory port map(
-        tree_num    => tree_number,
-        currentNode => nextNode3,
-        allinf      => allinf3
-    );
-
-    class_out <= allinf3(3 downto 0);
+    ---------------------------
+    --  Loop initialisation  --
+    ---------------------------
+	
+	-- Root node has address 0x00..0
+	curr_nodeAddress(0) <= (others => '0');
+	
+	-- Load data for root node from ROM
+	decisionTreeMemory_init : DecisionTreeMemory
+	generic map(
+		ADDRESS_BITS      => NODE_ADDRESS_BITS,
+		CLASS_BITS        => CLASS_LABEL_BITS,
+		FEATURE_BITS      => FEATURE_BITS,
+		FEATURE_ID_BITS   => FEATURE_ID_BITS,
+		FOREST_TREE_COUNT => TREE_COUNT
+	)
+	port map(
+		in_treeIndex   => in_treeIndex,
+		in_nodeAddress => curr_nodeAddress(0),
+		out_childL     => curr_nodeChildL(0),
+		out_childR     => curr_nodeChildR(0),
+		out_class      => curr_nodeClass(0),
+		out_featureID  => curr_nodeFeatureID(0),
+		out_threshold  => curr_nodeThreshold(0)
+	);
+	
+	----------------------
+    --  Loop execution  --
+    ----------------------
+	
+	genLoop:
+	for i in 1 to TREE_DEPTH-1 generate
+	
+		-- Retrieve comparison feature for previous node.
+		curr_compareFeature(i - 1) <= in_features(to_integer(unsigned(curr_nodeFeatureID(i - 1)))) after (i * (1 ns));
+	
+		-- Calculate address for next node	
+		node_loop : Node
+		generic map(
+			ADDRESS_BITS    => NODE_ADDRESS_BITS,
+			FEATURE_BITS    => FEATURE_BITS,
+			FEATURE_ID_BITS => FEATURE_ID_BITS
+		)
+		port map(
+			in_compareFeature => curr_compareFeature(i - 1),
+			in_nodeAddress    => curr_nodeAddress   (i - 1),
+			in_nodeChildL     => curr_nodeChildL    (i - 1),
+			in_nodeChildR     => curr_nodeChildR    (i - 1),
+			in_nodeFeatureID  => curr_nodeFeatureID (i - 1),
+			in_nodeThreshold  => curr_nodeThreshold (i - 1),
+			out_nextAddress   => curr_nodeAddress   (i)
+		);
+		
+		-- Load data for next node from ROM
+		decisionTreeMemory_loop : DecisionTreeMemory
+		generic map(
+			ADDRESS_BITS      => NODE_ADDRESS_BITS,
+			CLASS_BITS        => CLASS_LABEL_BITS,
+			FEATURE_BITS      => FEATURE_BITS,
+			FEATURE_ID_BITS   => FEATURE_ID_BITS,
+			FOREST_TREE_COUNT => TREE_COUNT
+		)
+		port map(
+			in_treeIndex   => in_treeIndex,
+			in_nodeAddress => curr_nodeAddress   (i),
+			out_childL     => curr_nodeChildL    (i),
+			out_childR     => curr_nodeChildR    (i),
+			out_class      => curr_nodeClass     (i),
+			out_featureID  => curr_nodeFeatureID (i),
+			out_threshold  => curr_nodeThreshold (i)
+		);
+	
+	end generate;
+	
+	--------------------------
+    --  Output assignments  --
+    --------------------------
+	
+	-- Reset ready-flag when either input changes.
+	out_ready <= '0', '1' after (TREE_DEPTH * (1 ns));
+	
+	-- Resulting classification label is that of the selected leaf.
+	out_class <= curr_nodeClass(TREE_DEPTH - 1);
 
 end arch;
