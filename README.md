@@ -8,7 +8,6 @@
 * Review and simplify provided code base
 * Create testbenches for all components
 * Modify random forest testbench to support automatic tests
-* ~~Implement support for systolic arrays~~ (Cancelled due to insufficient time)
 * Demonstrate a sensible way to embed in an MIPS architecture
 
 
