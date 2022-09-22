@@ -20,13 +20,14 @@ architecture test of RandomForest_tb is
 
     component RandomForest
 		generic(
-			CLASS_LABEL_BITS  : integer := 4;
-			FEATURE_BITS      : integer := 4;
-			FEATURE_ID_BITS   : integer := 4;
-			FEATURE_ID_COUNT  : integer := 4;
-			NODE_ADDRESS_BITS : integer := 4;
-			TREE_COUNT        : integer := 10;
-			TREE_DEPTH        : integer := 3
+			CLASS_LABEL_BITS  : positive;
+			FEATURE_BITS      : positive;
+			FEATURE_ID_BITS   : positive;
+			FEATURE_ID_COUNT  : positive;
+			NODE_ADDRESS_BITS : positive;
+			PATH_TO_ROM_FILE  : string;
+			TREE_COUNT        : positive;
+			TREE_DEPTH        : positive
 		);
 		port(
 			in_clock    : in  std_logic;
@@ -46,6 +47,16 @@ architecture test of RandomForest_tb is
 begin
 
     randomForest_1 : RandomForest
+    generic map(
+		CLASS_LABEL_BITS  => 4,
+		FEATURE_BITS      => 4,
+		FEATURE_ID_BITS   => 4,
+		FEATURE_ID_COUNT  => 4,
+		NODE_ADDRESS_BITS => 4,
+		PATH_TO_ROM_FILE  => "../res/iris_forest_1.dat",
+		TREE_COUNT        => 10,
+		TREE_DEPTH        => 3
+	)
     port map(
 		in_clock    => in_clock_1,
 		in_reset    => in_reset_1,

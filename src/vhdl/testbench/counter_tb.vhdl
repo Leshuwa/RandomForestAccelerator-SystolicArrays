@@ -16,7 +16,7 @@ architecture test of Counter_tb is
 
 	component Counter is
 		generic(
-			OUTPUT_BITS : integer := 2
+			OUTPUT_BITS : positive
 		);
 		port(
 			in_clock  : in  std_logic;

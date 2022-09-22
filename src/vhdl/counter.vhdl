@@ -28,7 +28,7 @@ use IEEE.std_logic_1164.all;
 
 entity Counter is
     generic(
-        OUTPUT_BITS : integer := 2
+        OUTPUT_BITS : positive
     );
     port(
         in_clock  : in  std_logic;

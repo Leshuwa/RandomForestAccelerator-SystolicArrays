@@ -20,8 +20,8 @@ architecture test of MajorityVote_tb is
 
     component MajorityVote is
         generic(
-            CLASS_COUNT_LOG_2 : integer := 3;
-            CLASS_LABEL_BITS  : integer := 4
+            CLASS_COUNT_LOG_2 : positive;
+            CLASS_LABEL_BITS  : positive
         );
         port(
             in_clock  : in  std_logic;
@@ -60,6 +60,10 @@ begin
     );
 
     majorityVote_3c_4l : MajorityVote
+    generic map(
+        CLASS_COUNT_LOG_2 => 3,
+        CLASS_LABEL_BITS  => 4
+    )
     port map(
         in_clock  => in_clock_3c_4l,
         in_labels => in_labels_3c_4l,

@@ -25,6 +25,8 @@ use work.rf_types.all;
 -- @generic FEATURE_ID_BITS   - Bits per feature index/ identifier.
 -- @generic FEATURE_ID_COUNT  - Number of used features (1..2^FEATURE_ID_BITS)
 -- @generic NODE_ADDRESS_BITS - Bits per node address.
+-- @generic PATH_TO_ROM_FILE  - ROM-file path relative to VHDL compilation unit
+--                               pointing at a Random Forest data file.
 -- @generic TREE_COUNT        - Number of trees per random forest.
 -- @generic TREE_DEPTH        - Levels in a single decision tree.
 --
@@ -39,13 +41,14 @@ use work.rf_types.all;
 
 entity RandomForest is
 	generic(
-		CLASS_LABEL_BITS  : integer := 4;
-		FEATURE_BITS      : integer := 4;
-		FEATURE_ID_BITS   : integer := 4;
-		FEATURE_ID_COUNT  : integer := 4;
-		NODE_ADDRESS_BITS : integer := 4;
-		TREE_COUNT        : integer := 10;
-		TREE_DEPTH        : integer := 3
+		CLASS_LABEL_BITS  : positive;
+		FEATURE_BITS      : positive;
+		FEATURE_ID_BITS   : positive;
+		FEATURE_ID_COUNT  : positive;
+		NODE_ADDRESS_BITS : positive;
+		PATH_TO_ROM_FILE  : string;
+		TREE_COUNT        : positive;
+		TREE_DEPTH        : positive
 	);
     port(
 		in_clock    : in  std_logic;
@@ -70,16 +73,17 @@ architecture arch of RandomForest is
 
 	component DecisionTree is
 		generic(
-			CLASS_LABEL_BITS  : integer := 4;
-			FEATURE_BITS      : integer := 4;
-			FEATURE_ID_BITS   : integer := 4;
-			FEATURE_ID_COUNT  : integer := 4;
-			NODE_ADDRESS_BITS : integer := 4;
-			TREE_COUNT        : integer := 10;
-			TREE_DEPTH        : integer := 3
+			CLASS_LABEL_BITS  : positive;
+			FEATURE_BITS      : positive;
+			FEATURE_ID_BITS   : positive;
+			FEATURE_ID_COUNT  : positive;
+			NODE_ADDRESS_BITS : positive;
+			PATH_TO_ROM_FILE  : string;
+			TREE_COUNT        : positive;
+			TREE_DEPTH        : positive
 		);
 		port(
-			in_treeIndex : in  integer;
+			in_treeIndex : in  natural;
 			in_features  : in  std_logic_matrix(0 to FEATURE_ID_COUNT-1)(FEATURE_BITS-1 downto 0);
 			out_ready    : out std_logic;
 			out_class    : out std_logic_vector(CLASS_LABEL_BITS-1 downto 0)
@@ -88,8 +92,8 @@ architecture arch of RandomForest is
 
     component MajorityVote
 		generic(
-			CLASS_COUNT_LOG_2 : integer := 3;
-			CLASS_LABEL_BITS  : integer := 4
+			CLASS_COUNT_LOG_2 : positive;
+			CLASS_LABEL_BITS  : positive
 		);
 		port(
 			in_clock  : in  std_logic;
@@ -125,6 +129,7 @@ begin
 			FEATURE_ID_BITS   => FEATURE_ID_BITS,
 			FEATURE_ID_COUNT  => FEATURE_ID_COUNT,
 			NODE_ADDRESS_BITS => NODE_ADDRESS_BITS,
+			PATH_TO_ROM_FILE  => PATH_TO_ROM_FILE,
 			TREE_COUNT        => TREE_COUNT,
 			TREE_DEPTH        => TREE_DEPTH
 		)

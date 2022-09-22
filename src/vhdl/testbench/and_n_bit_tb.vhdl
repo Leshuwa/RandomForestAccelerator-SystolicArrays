@@ -16,8 +16,8 @@ architecture test of And_n_Bit_tb is
 
     component And_n_Bit is
 		generic(
-			CONDITIONS : integer := 2;
-			INPUT_BITS : integer := 4
+			CONDITIONS : positive;
+			INPUT_BITS : positive
 		);
 		port(
 			in_conds   : in  std_logic_vector(CONDITIONS-1 downto 0);

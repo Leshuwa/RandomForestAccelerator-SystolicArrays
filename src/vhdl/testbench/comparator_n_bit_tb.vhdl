@@ -16,7 +16,7 @@ architecture test of Comparator_n_Bit_tb is
 
     component Comparator_n_Bit is
 		generic(
-			INPUT_BITS : integer := 4
+			INPUT_BITS : positive
 		);
         port(
 			in_threshold : in  std_logic_vector(INPUT_BITS-1 downto 0);

@@ -8,6 +8,8 @@ use IEEE.std_logic_1164.all;
 -- Compares input values (features and thresholds) and decides whether the
 --  value is greater than the threshold.
 --
+-- @generic INPUT_BITS - Length of both input vectors.
+--
 -- @in in_threshold - n-Bit threshold to compare against.
 -- @in in_value     - n-Bit value to compare.
 --
@@ -22,7 +24,7 @@ use IEEE.std_logic_1164.all;
 
 entity Comparator_n_Bit is
 	generic(
-		INPUT_BITS : integer := 4
+		INPUT_BITS : positive
 	);
     port(
         in_threshold : in  std_logic_vector(INPUT_BITS-1 downto 0);

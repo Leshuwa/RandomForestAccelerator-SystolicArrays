@@ -30,6 +30,8 @@ use work.rf_types.all;
 -- @generic FEATURE_ID_BITS   - Bits per feature index/ identifier.
 -- @generic FEATURE_ID_COUNT  - Number of used features (1..2^FEATURE_ID_BITS)
 -- @generic NODE_ADDRESS_BITS - Bits per node address.
+-- @generic PATH_TO_ROM_FILE  - ROM-file path relative to VHDL compilation unit
+--                               pointing at a Random Forest data file.
 -- @generic TREE_COUNT        - Number of trees per random forest.
 -- @generic TREE_DEPTH        - Levels in a single decision tree.
 --
@@ -44,16 +46,17 @@ use work.rf_types.all;
 
 entity DecisionTree is
 	generic(
-		CLASS_LABEL_BITS  : integer := 4;
-		FEATURE_BITS      : integer := 4;
-		FEATURE_ID_BITS   : integer := 4;
-		FEATURE_ID_COUNT  : integer := 4;
-		NODE_ADDRESS_BITS : integer := 4;
-		TREE_COUNT        : integer := 10;
-		TREE_DEPTH        : integer := 3
+		CLASS_LABEL_BITS  : positive;
+		FEATURE_BITS      : positive;
+		FEATURE_ID_BITS   : positive;
+		FEATURE_ID_COUNT  : positive;
+		NODE_ADDRESS_BITS : positive;
+		PATH_TO_ROM_FILE  : string;
+		TREE_COUNT        : positive;
+		TREE_DEPTH        : positive
 	);
     port(
-        in_treeIndex : in  integer;
+        in_treeIndex : in  natural;
 		in_features  : in  std_logic_matrix(0 to FEATURE_ID_COUNT-1)(FEATURE_BITS-1 downto 0);
 		out_ready    : out std_logic;
         out_class    : out std_logic_vector(CLASS_LABEL_BITS-1 downto 0)
@@ -74,15 +77,15 @@ architecture arch of DecisionTree is
 
     component DecisionTreeMemory is
 		generic(
-			ADDRESS_BITS      : integer := 4;
-			CLASS_BITS        : integer := 4;
-			FEATURE_BITS      : integer := 4;
-			FEATURE_ID_BITS   : integer := 4;
-			FOREST_TREE_COUNT : integer := 10;
-			PATH_TO_ROM_FILE  : string  := "../res/forest.dat"
+			ADDRESS_BITS      : positive;
+			CLASS_BITS        : positive;
+			FEATURE_BITS      : positive;
+			FEATURE_ID_BITS   : positive;
+			FOREST_TREE_COUNT : positive;
+			PATH_TO_ROM_FILE  : string
 		);
 		port(
-			in_treeIndex   : in  integer;
+			in_treeIndex   : in  natural;
 			in_nodeAddress : in  std_logic_vector(   ADDRESS_BITS-1 downto 0);
 			out_childL     : out std_logic_vector(   FEATURE_BITS-1 downto 0);
 			out_childR     : out std_logic_vector(   FEATURE_BITS-1 downto 0);
@@ -94,9 +97,9 @@ architecture arch of DecisionTree is
 
     component Node is
 		generic(
-			ADDRESS_BITS    : integer := 4;
-			FEATURE_BITS    : integer := 4;
-			FEATURE_ID_BITS : integer := 4
+			ADDRESS_BITS    : positive;
+			FEATURE_BITS    : positive;
+			FEATURE_ID_BITS : positive
 		);
 		port(
 			in_compareFeature : in  std_logic_vector(   FEATURE_BITS-1 downto 0);
@@ -139,7 +142,8 @@ begin
 		CLASS_BITS        => CLASS_LABEL_BITS,
 		FEATURE_BITS      => FEATURE_BITS,
 		FEATURE_ID_BITS   => FEATURE_ID_BITS,
-		FOREST_TREE_COUNT => TREE_COUNT
+		FOREST_TREE_COUNT => TREE_COUNT,
+		PATH_TO_ROM_FILE  => PATH_TO_ROM_FILE
 	)
 	port map(
 		in_treeIndex   => in_treeIndex,
@@ -185,7 +189,8 @@ begin
 			CLASS_BITS        => CLASS_LABEL_BITS,
 			FEATURE_BITS      => FEATURE_BITS,
 			FEATURE_ID_BITS   => FEATURE_ID_BITS,
-			FOREST_TREE_COUNT => TREE_COUNT
+			FOREST_TREE_COUNT => TREE_COUNT,
+			PATH_TO_ROM_FILE  => PATH_TO_ROM_FILE
 		)
 		port map(
 			in_treeIndex   => in_treeIndex,

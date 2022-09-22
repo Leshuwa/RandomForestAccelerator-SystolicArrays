@@ -16,9 +16,9 @@ architecture test of Node_tb is
 
 	component Node is
 		generic(
-			ADDRESS_BITS    : integer := 4;
-			FEATURE_BITS    : integer := 4;
-			FEATURE_ID_BITS : integer := 4
+			ADDRESS_BITS    : positive;
+			FEATURE_BITS    : positive;
+			FEATURE_ID_BITS : positive
 		);
 		port(
 			in_compareFeature : in  std_logic_vector(   FEATURE_BITS-1 downto 0);
@@ -66,6 +66,11 @@ begin
 	);
 
 	node_4a_4f_4i : Node
+	generic map(
+	    ADDRESS_BITS    => 4,
+	    FEATURE_BITS    => 4,
+	    FEATURE_ID_BITS => 4
+	)
 	port map(
 		in_compareFeature => in_compareFeature_4a_4f_4i,
 		in_nodeAddress    => in_nodeAddress_4a_4f_4i,

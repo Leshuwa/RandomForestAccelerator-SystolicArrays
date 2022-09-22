@@ -16,15 +16,15 @@ architecture test of DecisionTreeMemory_tb is
 
     component DecisionTreeMemory is
         generic(
-            ADDRESS_BITS      : integer := 4;
-            CLASS_BITS        : integer := 4;
-            FEATURE_BITS      : integer := 4;
-            FEATURE_ID_BITS   : integer := 4;
-            FOREST_TREE_COUNT : integer := 10;
-            PATH_TO_ROM_FILE  : string  := "../res/forest.dat"
+            ADDRESS_BITS      : positive;
+            CLASS_BITS        : positive;
+            FEATURE_BITS      : positive;
+            FEATURE_ID_BITS   : positive;
+            FOREST_TREE_COUNT : positive;
+            PATH_TO_ROM_FILE  : string
         );
         port(
-            in_treeIndex   : in  integer;
+            in_treeIndex   : in  natural;
             in_nodeAddress : in  std_logic_vector(   ADDRESS_BITS-1 downto 0);
             out_childL     : out std_logic_vector(   FEATURE_BITS-1 downto 0);
             out_childR     : out std_logic_vector(   FEATURE_BITS-1 downto 0);
@@ -34,7 +34,7 @@ architecture test of DecisionTreeMemory_tb is
         );
     end component;
     
-    signal in_treeIndex_1   : integer := 0;
+    signal in_treeIndex_1   : natural := 0;
     signal in_nodeAddress_1 : std_logic_vector((4)-1 downto 0) := "0000";
     signal out_childL_1     : std_logic_vector((4)-1 downto 0);
     signal out_childR_1     : std_logic_vector((4)-1 downto 0);
@@ -42,7 +42,7 @@ architecture test of DecisionTreeMemory_tb is
     signal out_featureID_1  : std_logic_vector((4)-1 downto 0);
     signal out_threshold_1  : std_logic_vector((4)-1 downto 0);
     
-    signal in_treeIndex_2   : integer := 0;
+    signal in_treeIndex_2   : natural := 0;
     signal in_nodeAddress_2 : std_logic_vector((3)-1 downto 0) := "000";
     signal out_childL_2     : std_logic_vector((8)-1 downto 0);
     signal out_childR_2     : std_logic_vector((8)-1 downto 0);
@@ -53,6 +53,14 @@ architecture test of DecisionTreeMemory_tb is
 begin
 
     decisionTreeMemory_1 : DecisionTreeMemory
+     generic map(
+         ADDRESS_BITS      => 4,
+         CLASS_BITS        => 4,
+         FEATURE_BITS      => 4,
+         FEATURE_ID_BITS   => 4,
+         FOREST_TREE_COUNT => 10,
+         PATH_TO_ROM_FILE  => "../res/iris_forest_1.dat"
+     )
     port map(
         in_treeIndex   => in_treeIndex_1,
         in_nodeAddress => in_nodeAddress_1,
@@ -70,7 +78,7 @@ begin
     --     FEATURE_BITS      => 8,
     --     FEATURE_ID_BITS   => 5,
     --     FOREST_TREE_COUNT => 17,
-    --     PATH_TO_ROM_FILE  => "../res/forest_2.dat"
+    --     PATH_TO_ROM_FILE  => "../res/iris_forest_2.dat"
     -- )
     -- port map(
     --     in_treeIndex   => in_treeIndex_2,

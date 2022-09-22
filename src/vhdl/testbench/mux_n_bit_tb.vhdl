@@ -21,8 +21,8 @@ architecture test of Mux_n_Bit_tb is
 
 	component Mux_n_Bit is
 		generic(
-			INPUT_BITS  : integer := 4;
-			SELECT_BITS : integer := 2
+			INPUT_BITS  : positive;
+			SELECT_BITS : positive
 		);
 		port(
 			in_select  : in  std_logic_vector(SELECT_BITS-1 downto 0);

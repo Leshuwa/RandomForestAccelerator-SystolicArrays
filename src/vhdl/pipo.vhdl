@@ -20,7 +20,7 @@ use IEEE.std_logic_1164.all;
 
 entity Pipo is
 	generic(
-		INPUT_BITS : integer := 4
+		INPUT_BITS : positive
 	);
     port(
         in_clock  : in  std_logic;

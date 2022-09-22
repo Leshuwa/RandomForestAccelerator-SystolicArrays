@@ -43,9 +43,9 @@ use IEEE.std_logic_1164.all;
 
 entity Node is
 		generic(
-			ADDRESS_BITS    : integer := 4;
-			FEATURE_BITS    : integer := 4;
-			FEATURE_ID_BITS : integer := 4
+			ADDRESS_BITS    : positive;
+			FEATURE_BITS    : positive;
+			FEATURE_ID_BITS : positive
 		);
 		port(
 			in_compareFeature : in  std_logic_vector(   FEATURE_BITS-1 downto 0);
@@ -68,8 +68,8 @@ architecture arch of Node is
 
 	component And_n_Bit is
 		generic(
-			CONDITIONS : integer := 2;
-			INPUT_BITS : integer := 4
+			CONDITIONS : positive;
+			INPUT_BITS : positive
 		);
 		port(
 			in_conds   : in  std_logic_vector(CONDITIONS-1 downto 0);
@@ -80,7 +80,7 @@ architecture arch of Node is
 
     component Comparator_n_Bit is
 		generic(
-			INPUT_BITS : integer := 4
+			INPUT_BITS : positive
 		);
         port(
 			in_threshold : in  std_logic_vector(INPUT_BITS-1 downto 0);

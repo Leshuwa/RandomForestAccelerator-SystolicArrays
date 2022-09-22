@@ -66,8 +66,8 @@ use work.rf_types.all;
 
 entity MajorityVote is
     generic(
-        CLASS_COUNT_LOG_2 : integer := 3;
-        CLASS_LABEL_BITS  : integer := 4
+        CLASS_COUNT_LOG_2 : positive;
+        CLASS_LABEL_BITS  : positive
     );
     port(
         in_clock  : in  std_logic;
@@ -92,7 +92,7 @@ architecture arch of MajorityVote is
     
     component Comparator_n_Bit is
         generic(
-            INPUT_BITS : integer := 4
+            INPUT_BITS : positive
         );
         port(
             in_threshold : in  std_logic_vector(INPUT_BITS-1 downto 0);
@@ -105,7 +105,7 @@ architecture arch of MajorityVote is
     
     component Counter is
         generic(
-            OUTPUT_BITS : integer := 2
+            OUTPUT_BITS : positive
         );
         port(
             in_clock  : in  std_logic;
@@ -127,8 +127,8 @@ architecture arch of MajorityVote is
     
     component Mux_n_Bit is
         generic(
-            INPUT_BITS  : integer := 4;
-            SELECT_BITS : integer := 2
+            INPUT_BITS  : positive;
+            SELECT_BITS : positive
         );
         port(
             in_select  : in  std_logic_vector(SELECT_BITS-1 downto 0);
@@ -139,7 +139,7 @@ architecture arch of MajorityVote is
     
     component Pipo is
         generic(
-            INPUT_BITS : integer := 4
+            INPUT_BITS : positive
         );
         port(
             in_clock  : in  std_logic;

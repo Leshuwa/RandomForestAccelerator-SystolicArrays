@@ -9,6 +9,9 @@ use IEEE.std_logic_1164.all;
 --  1-Bit flags. Outputs the input array iff all condition bits in the condition
 --  mask are raised (i.e. set to '1').
 --
+-- @generic CONDITIONS - Number of one-bit conditions to evaluate.
+-- @generic INPUT_BITS - Input bit vector length.
+--
 -- @in in_cond   - Conditional bit array.
 -- @in in_vector - Input bit array.
 --
@@ -21,8 +24,8 @@ use IEEE.std_logic_1164.all;
 
 entity And_n_Bit is
 	generic(
-		CONDITIONS : integer := 2;
-		INPUT_BITS : integer := 4
+		CONDITIONS : positive;
+		INPUT_BITS : positive
 	);
     port(
 		in_conds   : in  std_logic_vector(CONDITIONS-1 downto 0);

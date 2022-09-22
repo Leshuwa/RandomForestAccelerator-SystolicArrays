@@ -16,7 +16,7 @@ architecture test of Pipo_tb is
 
     component Pipo is
 	    generic(
-		    INPUT_BITS : integer := 4
+		    INPUT_BITS : positive
 	    );
         port(
             in_clock  : in  std_logic;
@@ -39,6 +39,9 @@ architecture test of Pipo_tb is
 begin
 
     pipo_4_bit : Pipo
+    generic map(
+        INPUT_BITS => 4
+    )
     port map(
         in_clock  => in_clock_4_bit,
         in_reset  => in_reset_4_bit,

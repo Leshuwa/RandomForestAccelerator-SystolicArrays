@@ -32,8 +32,8 @@ use STD.textio.all;
 -- @generic CLASS_BITS        - Bit count of classification labels.
 -- @generic FEATURE_BITS      - Number of bits in feature and threshold values.
 -- @generic FOREST_TREE_COUNT - Number of trees in a random forest instance.
--- @generic PATH_TO_ROM_FILE  - ROM-file path relative to VHDL compilation unit.
---                               Here the path is relative to the 'out' folder.
+-- @generic PATH_TO_ROM_FILE  - ROM-file path relative to VHDL compilation unit
+--                               pointing at a Random Forest data file.
 --
 -- @in in_treeIndex   - Index of the tree for which to load data.
 -- @in in_nodeAddress - Node address within given tree.
@@ -50,15 +50,15 @@ use STD.textio.all;
 
 entity DecisionTreeMemory is
     generic(
-        ADDRESS_BITS      : integer := 4;
-        CLASS_BITS        : integer := 4;
-        FEATURE_BITS      : integer := 4;
-        FEATURE_ID_BITS   : integer := 4;
-        FOREST_TREE_COUNT : integer := 10;
-        PATH_TO_ROM_FILE  : string  := "../res/forest.dat"
+        ADDRESS_BITS      : positive;
+        CLASS_BITS        : positive;
+        FEATURE_BITS      : positive;
+        FEATURE_ID_BITS   : positive;
+        FOREST_TREE_COUNT : positive;
+        PATH_TO_ROM_FILE  : string
     );
     port(
-        in_treeIndex   : in  integer;
+        in_treeIndex   : in  natural;
         in_nodeAddress : in  std_logic_vector(   ADDRESS_BITS-1 downto 0);
         out_childL     : out std_logic_vector(   FEATURE_BITS-1 downto 0);
         out_childR     : out std_logic_vector(   FEATURE_BITS-1 downto 0);
