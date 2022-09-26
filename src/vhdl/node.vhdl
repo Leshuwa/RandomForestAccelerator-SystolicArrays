@@ -91,9 +91,9 @@ architecture arch of Node is
         );
     end component;
 	
-	signal in_conds_0 : std_logic_vector(0 downto 0);
-	signal in_conds_1 : std_logic_vector(1 downto 0);
-	signal in_conds_2 : std_logic_vector(1 downto 0);
+	signal conds_0 : std_logic_vector(0 downto 0);
+	signal conds_1 : std_logic_vector(1 downto 0);
+	signal conds_2 : std_logic_vector(1 downto 0);
 	
 	signal isGreater  : std_logic;
 	signal isLeafNode : std_logic;
@@ -130,11 +130,11 @@ begin
 	-- Prepare AND-gate condition inputs.
 	isTreeNode <= NOT isLeafNode;
 	
-	in_conds_0(0) <= isLeafNode;
-	in_conds_1(0) <= isTreeNode;
-	in_conds_1(1) <= (NOT isGreater);
-	in_conds_2(0) <= isTreeNode;
-	in_conds_2(1) <= isGreater;
+	conds_0(0) <= isLeafNode;
+	conds_1(0) <= isTreeNode;
+	conds_1(1) <= (NOT isGreater);
+	conds_2(0) <= isTreeNode;
+	conds_2(1) <= isGreater;
 	
 	-- Create AND-gates for node addresses.
 	and_n_bit_0 : And_n_Bit
@@ -143,7 +143,7 @@ begin
 		INPUT_BITS => ADDRESS_BITS
 	)
     port map(
-		in_conds   => in_conds_0,
+		in_conds   => conds_0,
         in_vector  => in_nodeAddress,
 		out_vector => nodeAddress_and
 	);
@@ -154,7 +154,7 @@ begin
 		INPUT_BITS => ADDRESS_BITS
 	)
     port map(
-		in_conds   => in_conds_1,
+		in_conds   => conds_1,
         in_vector  => in_nodeChildL,
 		out_vector => nodeChildL_and
     );
@@ -165,7 +165,7 @@ begin
 		INPUT_BITS => ADDRESS_BITS
 	)
     port map(
-		in_conds   => in_conds_2,
+		in_conds   => conds_2,
         in_vector  => in_nodeChildR,
 		out_vector => nodeChildR_and
     );
