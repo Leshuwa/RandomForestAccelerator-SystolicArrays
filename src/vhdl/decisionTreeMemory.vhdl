@@ -1,10 +1,12 @@
 library IEEE;
-use IEEE.numeric_std.all;
 use IEEE.std_logic_1164.all;
 use IEEE.std_logic_textio.all;
 
 library STD;
 use STD.textio.all;
+
+library work;
+use work.rf_types.all;
 
 
 
@@ -34,8 +36,8 @@ use STD.textio.all;
 -- @generic FOREST_TREE_COUNT - Number of trees in a random forest instance.
 -- @generic PATH_TO_ROM_FILE  - ROM-file path relative to VHDL compilation unit
 --                               pointing at a Random Forest data file.
+-- @generic TREE_INDEX        - Index of the tree for which to load data.
 --
--- @in in_treeIndex   - Index of the tree for which to load data.
 -- @in in_nodeAddress - Node address within given tree.
 --
 -- @out out_childL    - Address of the tree node's left child node.
@@ -55,10 +57,10 @@ entity DecisionTreeMemory is
         FEATURE_BITS      : positive;
         FEATURE_ID_BITS   : positive;
         FOREST_TREE_COUNT : positive;
-        PATH_TO_ROM_FILE  : string
+        PATH_TO_ROM_FILE  : string;
+		TREE_INDEX        : natural
     );
     port(
-        in_treeIndex   : in  natural;
         in_nodeAddress : in  std_logic_vector(   ADDRESS_BITS-1 downto 0);
         out_childL     : out std_logic_vector(   FEATURE_BITS-1 downto 0);
         out_childR     : out std_logic_vector(   FEATURE_BITS-1 downto 0);
@@ -88,55 +90,84 @@ architecture arch of DecisionTreeMemory is
     constant BEGIN_INDEX_CHILD_L     : integer := NODE_DATA_BITS - FEATURE_BITS - FEATURE_ID_BITS;
     constant BEGIN_INDEX_CHILD_R     : integer := NODE_DATA_BITS - FEATURE_BITS - FEATURE_ID_BITS - ADDRESS_BITS;
     constant BEGIN_INDEX_CLASS_LABEL : integer := NODE_DATA_BITS - FEATURE_BITS - FEATURE_ID_BITS - (2 * ADDRESS_BITS);
-
-    type forest_data_matrix
-      is  array(0 to FOREST_TREE_COUNT-1, 0 to MAX_NODE_COUNT-1)
-      of  std_logic_vector(NODE_DATA_BITS-1 downto 0);
+	
+    
+    -----------------------------
+    --  Component declaration  --
+    -----------------------------
+	
+	component Mux_n_Bit is
+		generic(
+			INPUT_BITS  : positive;
+			SELECT_BITS : positive
+		);
+		port(
+			in_select  : in  std_logic_vector(SELECT_BITS-1 downto 0);
+			in_values  : in  std_logic_matrix((2**SELECT_BITS)-1 downto 0)(INPUT_BITS-1 downto 0);
+			out_value  : out std_logic_vector(INPUT_BITS-1 downto 0)
+		);
+	end component;
 
     
     ----------------------------
     --  Function declaration  --
     ----------------------------
     
-    impure function loadForestFromFile(path : string)
-        return forest_data_matrix
+    impure function loadForestFromFile
+        return std_logic_matrix
     is
         
-        file     dataFile       : text open read_mode is path;
+        file     dataFile       : text open read_mode is PATH_TO_ROM_FILE;
         variable dataFileLine   : line;
-        variable nodeDataMatrix : forest_data_matrix;
+        variable nodeDataMatrix : std_logic_matrix((2**ADDRESS_BITS)-1 downto 0)(NODE_DATA_BITS-1 downto 0) := (others => (others => '0'));
         
     begin
     
         tree_data_loop : for treeIndex in 0 to FOREST_TREE_COUNT-1 loop
-            node_data_loop : for nodeIndex in 0 to NODE_DATA_BITS-1 loop
+			
+			if (treeIndex = TREE_INDEX) then
+				
+				node_data_loop : for nodeIndex in 0 to NODE_DATA_BITS-1 loop
                 
-                readline(dataFile, dataFileLine);
-                
-                if dataFileLine'length < NODE_DATA_BITS then
-                    exit node_data_loop;
-                end if;
-                
-                read(dataFileLine, nodeDataMatrix(treeIndex, nodeIndex));
-                
-            end loop;
+					readline(dataFile, dataFileLine);
+					
+					if (dataFileLine'length < NODE_DATA_BITS) then
+						exit node_data_loop;
+					end if;
+					
+					read(dataFileLine, nodeDataMatrix(nodeIndex));
+					
+				end loop;
+				
+			end if;
+			
         end loop;
         
         return nodeDataMatrix;
         
     end function;
+
     
     --------------------------
     --  Signal declaration  --
     --------------------------
     
-    signal nodeDataMatrix : forest_data_matrix := loadForestFromFile(PATH_TO_ROM_FILE);
+    signal nodeDataMatrix : std_logic_matrix((2**ADDRESS_BITS)-1 downto 0)(NODE_DATA_BITS-1 downto 0) := loadForestFromFile;
     signal nodeData       : std_logic_vector(NODE_DATA_BITS-1 downto 0);
     
 begin
-    
-    -- Convert node address to node index and read from node data matrix.
-    nodeData <= nodeDataMatrix(in_treeIndex, to_integer(unsigned(in_nodeAddress)));
+
+	-- Feed address bits into multiplexer to retrieve loaded node data from ROM.
+	mux_get_data : Mux_n_Bit
+	generic map(
+		INPUT_BITS  => NODE_DATA_BITS,
+		SELECT_BITS => ADDRESS_BITS
+	)
+	port map(
+		in_select => in_nodeAddress,
+		in_values => nodeDataMatrix,
+		out_value => nodeData
+	);
     
     -- Divide node data into output fields.
     out_threshold <= nodeData(BEGIN_INDEX_THRESHOLD-1   downto BEGIN_INDEX_THRESHOLD   - FEATURE_BITS);

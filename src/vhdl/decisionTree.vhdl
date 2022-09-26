@@ -1,5 +1,4 @@
 library IEEE;
-use IEEE.numeric_std.all;
 use IEEE.std_logic_1164.all;
 
 library work;
@@ -34,8 +33,8 @@ use work.rf_types.all;
 --                               pointing at a Random Forest data file.
 -- @generic TREE_COUNT        - Number of trees per random forest.
 -- @generic TREE_DEPTH        - Levels in a single decision tree.
+-- @generic TREE_INDEX        - Current index of this tree for memory reference.
 --
--- @in in_treeIndex - Current index of this decision tree for memory reference.
 -- @in in_features  - Input matrix containing a feature set for classification.
 -- @in in_reset     - Set to '1' to reset the entire decision tree.
 --
@@ -53,10 +52,10 @@ entity DecisionTree is
 		NODE_ADDRESS_BITS : positive;
 		PATH_TO_ROM_FILE  : string;
 		TREE_COUNT        : positive;
-		TREE_DEPTH        : positive
+		TREE_DEPTH        : positive;
+		TREE_INDEX        : natural
 	);
     port(
-        in_treeIndex : in  natural;
 		in_features  : in  std_logic_matrix(0 to FEATURE_ID_COUNT-1)(FEATURE_BITS-1 downto 0);
 		out_ready    : out std_logic;
         out_class    : out std_logic_vector(CLASS_LABEL_BITS-1 downto 0)
@@ -82,10 +81,10 @@ architecture arch of DecisionTree is
 			FEATURE_BITS      : positive;
 			FEATURE_ID_BITS   : positive;
 			FOREST_TREE_COUNT : positive;
-			PATH_TO_ROM_FILE  : string
+			PATH_TO_ROM_FILE  : string;
+			TREE_INDEX        : natural
 		);
 		port(
-			in_treeIndex   : in  natural;
 			in_nodeAddress : in  std_logic_vector(   ADDRESS_BITS-1 downto 0);
 			out_childL     : out std_logic_vector(   FEATURE_BITS-1 downto 0);
 			out_childR     : out std_logic_vector(   FEATURE_BITS-1 downto 0);
@@ -111,6 +110,18 @@ architecture arch of DecisionTree is
 			out_nextAddress   : out std_logic_vector(   ADDRESS_BITS-1 downto 0)
 		);
     end component;
+	
+	component Mux_n_Bit is
+		generic(
+			INPUT_BITS  : positive;
+			SELECT_BITS : positive
+		);
+		port(
+			in_select  : in  std_logic_vector(SELECT_BITS-1 downto 0);
+			in_values  : in  std_logic_matrix((2**SELECT_BITS)-1 downto 0)(INPUT_BITS-1 downto 0);
+			out_value  : out std_logic_vector(INPUT_BITS-1 downto 0)
+		);
+	end component;
     
     
     --------------------------
@@ -124,9 +135,28 @@ architecture arch of DecisionTree is
 	signal curr_nodeClass      : std_logic_matrix(0 to TREE_DEPTH-1)( CLASS_LABEL_BITS-1 downto 0);
 	signal curr_nodeFeatureID  : std_logic_matrix(0 to TREE_DEPTH-1)(  FEATURE_ID_BITS-1 downto 0) := (others => (others => '0'));
 	signal curr_nodeThreshold  : std_logic_matrix(0 to TREE_DEPTH-1)(     FEATURE_BITS-1 downto 0);
+	
+	-- Given input feature IDs, padded from FEATURE_ID_COUNT to 2^FEATURE_ID_BITS elements.
+	signal paddedFeatures : std_logic_matrix(0 to (2**FEATURE_ID_BITS)-1)(FEATURE_BITS-1 downto 0);
 
 
 begin
+
+	-- Pad input features
+	genPaddedFeatures:
+	for i in 0 to (2**FEATURE_ID_BITS)-1 generate
+	
+		genPaddedFeatures_feature:
+		if (i < FEATURE_ID_COUNT) generate
+			paddedFeatures(i) <= in_features(i);
+		end generate;
+		
+		genPaddedFeatures_padding:
+		if (i >= FEATURE_ID_COUNT) generate
+			paddedFeatures(i) <= (others => '0');
+		end generate;
+	
+	end generate;
 
     ---------------------------
     --  Loop initialisation  --
@@ -143,10 +173,10 @@ begin
 		FEATURE_BITS      => FEATURE_BITS,
 		FEATURE_ID_BITS   => FEATURE_ID_BITS,
 		FOREST_TREE_COUNT => TREE_COUNT,
-		PATH_TO_ROM_FILE  => PATH_TO_ROM_FILE
+		PATH_TO_ROM_FILE  => PATH_TO_ROM_FILE,
+		TREE_INDEX        => TREE_INDEX
 	)
 	port map(
-		in_treeIndex   => in_treeIndex,
 		in_nodeAddress => curr_nodeAddress(0),
 		out_childL     => curr_nodeChildL(0),
 		out_childR     => curr_nodeChildR(0),
@@ -163,7 +193,16 @@ begin
 	for i in 1 to TREE_DEPTH-1 generate
 	
 		-- Retrieve comparison feature for previous node.
-		curr_compareFeature(i - 1) <= in_features(to_integer(unsigned(curr_nodeFeatureID(i - 1)))) after (i * (1 ns));
+		mux_get_feature : Mux_n_Bit
+		generic map(
+			INPUT_BITS  => FEATURE_BITS,
+			SELECT_BITS => FEATURE_ID_BITS
+		)
+		port map(
+			in_select => curr_nodeFeatureID(i - 1),
+			in_values => paddedFeatures,
+			out_value => curr_compareFeature(i - 1)
+		);
 	
 		-- Calculate address for next node	
 		node_loop : Node
@@ -190,10 +229,10 @@ begin
 			FEATURE_BITS      => FEATURE_BITS,
 			FEATURE_ID_BITS   => FEATURE_ID_BITS,
 			FOREST_TREE_COUNT => TREE_COUNT,
-			PATH_TO_ROM_FILE  => PATH_TO_ROM_FILE
+			PATH_TO_ROM_FILE  => PATH_TO_ROM_FILE,
+			TREE_INDEX        => TREE_INDEX
 		)
 		port map(
-			in_treeIndex   => in_treeIndex,
 			in_nodeAddress => curr_nodeAddress   (i),
 			out_childL     => curr_nodeChildL    (i),
 			out_childR     => curr_nodeChildR    (i),

@@ -26,17 +26,16 @@ architecture test of DecisionTree_tb is
 			NODE_ADDRESS_BITS : positive;
 			PATH_TO_ROM_FILE  : string;
 			TREE_COUNT        : positive;
-			TREE_DEPTH        : positive
+			TREE_DEPTH        : positive;
+			TREE_INDEX        : natural
 		);
 		port(
-			in_treeIndex : in  natural;
 			in_features  : in  std_logic_matrix(0 to FEATURE_ID_COUNT-1)(FEATURE_BITS-1 downto 0);
 			out_ready    : out std_logic;
 			out_class    : out std_logic_vector(CLASS_LABEL_BITS-1 downto 0)
 		);
 	end component;
 	
-	signal in_treeIndex_1 : natural := 0;
 	signal in_features_1  : std_logic_matrix(0 to (4)-1)((4)-1 downto 0) := (others => "0000");
 	signal out_ready_1    : std_logic;
 	signal out_class_1    : std_logic_vector((4)-1 downto 0);
@@ -52,10 +51,10 @@ begin
 		NODE_ADDRESS_BITS => 4,
 		PATH_TO_ROM_FILE  => "../res/iris_forest_1.dat",
 		TREE_COUNT        => 10,
-		TREE_DEPTH        => 3
+		TREE_DEPTH        => 3,
+		TREE_INDEX        => 0
 	)
 	port map(
-		in_treeIndex => in_treeIndex_1,
 		in_features  => in_features_1,
 		out_ready    => out_ready_1,
 		out_class    => out_class_1

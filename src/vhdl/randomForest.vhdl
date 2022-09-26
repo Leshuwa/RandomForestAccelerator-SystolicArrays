@@ -80,10 +80,10 @@ architecture arch of RandomForest is
 			NODE_ADDRESS_BITS : positive;
 			PATH_TO_ROM_FILE  : string;
 			TREE_COUNT        : positive;
-			TREE_DEPTH        : positive
+			TREE_DEPTH        : positive;
+			TREE_INDEX        : natural
 		);
 		port(
-			in_treeIndex : in  natural;
 			in_features  : in  std_logic_matrix(0 to FEATURE_ID_COUNT-1)(FEATURE_BITS-1 downto 0);
 			out_ready    : out std_logic;
 			out_class    : out std_logic_vector(CLASS_LABEL_BITS-1 downto 0)
@@ -131,10 +131,10 @@ begin
 			NODE_ADDRESS_BITS => NODE_ADDRESS_BITS,
 			PATH_TO_ROM_FILE  => PATH_TO_ROM_FILE,
 			TREE_COUNT        => TREE_COUNT,
-			TREE_DEPTH        => TREE_DEPTH
+			TREE_DEPTH        => TREE_DEPTH,
+			TREE_INDEX        => i
 		)
 		port map(
-			in_treeIndex => i,
 			in_features  => in_features,
 			out_ready    => decisionTreeReady(i),
 			out_class    => decisionTreeClass(i)
