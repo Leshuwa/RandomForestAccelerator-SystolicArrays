@@ -1,0 +1,77 @@
+
+================================
+==  Complexity per component  ==
+================================
+
+	Comparators (9n - 5)
+		comparator_is_matching			->	9 * CLASS_LABEL_BITS - 5
+		comparator_match_count			->	9 * CLASS_COUNT_LOG_2 - 5
+	
+	Counter (15n + 6)
+		counter_current_label_index		->	15 * CLASS_COUNT_LOG_2 + 6
+		counter_label_matches			->	15 * CLASS_COUNT_LOG_2 + 6
+		counter_reference_label_index	->	15 * (2 * CLASS_COUNT_LOG_2) + 6
+	
+	D-Flip-Flop (10)
+		dff_computation_done			->	10
+	
+	Multiplexers (2^m * (n + m) + m - 1)
+		mux_label_reference				->	2^CLASS_COUNT_LOG_2 * (CLASS_LABEL_BITS + CLASS_COUNT_LOG_2) + CLASS_COUNT_LOG_2 - 1
+		mux_label_value					->	2^CLASS_COUNT_LOG_2 * (CLASS_LABEL_BITS + CLASS_COUNT_LOG_2) + CLASS_COUNT_LOG_2 - 1
+	
+	PIPO registers (10n + 1)
+		pipo_label_reference_matches	->	10 * CLASS_COUNT_LOG_2 + 1
+		pipo_label_reference			->	10 * CLASS_LABEL_BITS + 1
+	
+	Own gates
+		NOT: 6
+		AND: 5
+		OR:  3 + CLASS_LABEL_BITS		-> CLASS_LABEL_BITS + 14
+
+
+
+======================================
+==  Total complexity summarisation  ==
+======================================
+
+		9 * CLASS_LABEL_BITS - 5
+	+	9 * CLASS_COUNT_LOG_2 - 5
+	+	15 * CLASS_COUNT_LOG_2 + 6
+	+	15 * CLASS_COUNT_LOG_2 + 6
+	+	15 * (2 * CLASS_COUNT_LOG_2) + 6
+	+	10
+	+	2^CLASS_COUNT_LOG_2 * (CLASS_LABEL_BITS + CLASS_COUNT_LOG_2) + CLASS_COUNT_LOG_2 - 1
+	+	2^CLASS_COUNT_LOG_2 * (CLASS_LABEL_BITS + CLASS_COUNT_LOG_2) + CLASS_COUNT_LOG_2 - 1
+	+	10 * CLASS_COUNT_LOG_2 + 1
+	+	10 * CLASS_LABEL_BITS + 1
+	+	CLASS_LABEL_BITS + 14
+	---------------------------------------------------------------------------------------------
+	=	  2^(CLASS_COUNT_LOG_2 + 1) * (CLASS_LABEL_BITS + CLASS_COUNT_LOG_2)
+		+ 81 * CLASS_COUNT_LOG_2
+		+ 20 * CLASS_LABEL_BITS
+		+ 32
+
+
+
+===================================================
+==  Example: Complexity for IRIS data set items  ==
+===================================================
+
+	Since the provided example contained ten different decision trees,
+	 the next largest base-2 class count is sixteen (16). Hence,
+	
+		CLASS_COUNT_LOG_2 = 4
+	
+	There are three classes (setosa, versicolor, and virginica) defined
+	 over the four-bit class labels, however we shall deem two (2) bits
+	 sufficient. Thus,
+	
+		CLASS_LABEL_BITS = 2
+
+	In order to model the majority vote component as done by last year's
+	 group, the proposed implementation therefore requires a total of
+	
+		2^(4 + 1) * (4 + 2) + 81 * 4 + 20 * 2 + 32 = 588
+	
+	 registers. Five-hundred and eighty-eight (588) gates are thus needed
+	 to implement the majority vote as proposed by this year's review.

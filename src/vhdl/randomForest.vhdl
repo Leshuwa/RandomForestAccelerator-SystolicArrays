@@ -2,96 +2,181 @@ library IEEE;
 use IEEE.numeric_std.all;
 use IEEE.std_logic_1164.ALL;
 
+library work;
+use work.rf_types.all;
 
 
--- entity of design has:
--- 4 inputs (sepal_length, sepal_width, petal_length, petal_width) each 4 bits which are the features of the iris data-set
--- 1 output: class_out can have 3 possible outputs only "0000"=>(setosa), "0001"=>(versicolor), "0010"=>(virginica)
+
+--------------------------------------------------------------------------------
+--
+-- Random Forest-based implementation of a classification algorithm.
+--
+--------------------------------------------------------------------------------
+--
+-- Feeds given feature set into a pre-defined number of decision trees. Each
+--  tree calculates their own suggested classification for given feature set.
+-- These suggested class labels are then handed to a majority vote component
+--  to decide for a final classification.
+--
+--------------------------------------------------------------------------------
+--
+-- @generic CLASS_LABEL_BITS  - Number of bits a single class label has.
+-- @generic FEATURE_BITS      - Bit count for class entity features.
+-- @generic FEATURE_ID_BITS   - Bits per feature index/ identifier.
+-- @generic FEATURE_ID_COUNT  - Number of used features (1..2^FEATURE_ID_BITS)
+-- @generic NODE_ADDRESS_BITS - Bits per node address.
+-- @generic PATH_TO_ROM_FILE  - ROM-file path relative to VHDL compilation unit
+--                               pointing at a Random Forest data file.
+-- @generic TREE_COUNT        - Number of trees per random forest.
+-- @generic TREE_DEPTH        - Levels in a single decision tree.
+--
+-- @in in_clock    - Clock input used to update the counter and queue components.
+-- @in in_reset    - Synchronously resets the current calculation and outputs.
+-- @in in_features - Input matrix containing a feature set for classification.
+--
+-- @out out_ready - Outputs '1' once calculation has finished.
+-- @out out_class - Selected class value; only valid while out_ready is '1'.
+--
+--------------------------------------------------------------------------------
 
 entity RandomForest is
+	generic(
+		CLASS_LABEL_BITS  : positive;
+		FEATURE_BITS      : positive;
+		FEATURE_ID_BITS   : positive;
+		FEATURE_ID_COUNT  : positive;
+		NODE_ADDRESS_BITS : positive;
+		PATH_TO_ROM_FILE  : string;
+		TREE_COUNT        : positive;
+		TREE_DEPTH        : positive
+	);
     port(
-        sepal_length : in  std_logic_vector(3 downto 0);
-        sepal_width  : in  std_logic_vector(3 downto 0);
-        petal_length : in  std_logic_vector(3 downto 0);
-        petal_width  : in  std_logic_vector(3 downto 0);
-        class_out    : out std_logic_vector(3 downto 0)
+		in_clock    : in  std_logic;
+		in_reset    : in  std_logic;
+		in_features : in  std_logic_matrix(0 to FEATURE_ID_COUNT-1)(FEATURE_BITS-1 downto 0);
+		out_ready   : out std_logic;
+		out_class   : out std_logic_vector(CLASS_LABEL_BITS-1 downto 0)
     );
-
 end RandomForest;
 
 
 
+--------------------------------------------------------------------------------
+-- Architecture implementation.
+--------------------------------------------------------------------------------
+
 architecture arch of RandomForest is
+    
+    -----------------------------
+    --  Component declaration  --
+    -----------------------------
 
-    -- array results below stores the class from each of the 10 decision trees which will then be
-    -- used in the majority vote component to calculate the final decision.
-    type mem is array(0 to 9) of std_logic_vector(3 downto 0);
-
-    signal results     : mem;
-    signal finalresult : std_logic_vector(3 downto 0); -- signal for the final decision of the design
-    signal en          : std_logic; -- enable bit used in the majority vote component
+	component DecisionTree is
+		generic(
+			CLASS_LABEL_BITS  : positive;
+			FEATURE_BITS      : positive;
+			FEATURE_ID_BITS   : positive;
+			FEATURE_ID_COUNT  : positive;
+			NODE_ADDRESS_BITS : positive;
+			PATH_TO_ROM_FILE  : string;
+			TREE_COUNT        : positive;
+			TREE_DEPTH        : positive;
+			TREE_INDEX        : natural
+		);
+		port(
+			in_features  : in  std_logic_matrix(0 to FEATURE_ID_COUNT-1)(FEATURE_BITS-1 downto 0);
+			out_ready    : out std_logic;
+			out_class    : out std_logic_vector(CLASS_LABEL_BITS-1 downto 0)
+		);
+	end component;
 
     component MajorityVote
-        port(
-            enable : in  std_logic;
-            a      : in  std_logic_vector(3 downto 0);
-            b      : in  std_logic_vector(3 downto 0);
-            c      : in  std_logic_vector(3 downto 0);
-            d      : in  std_logic_vector(3 downto 0);
-            e      : in  std_logic_vector(3 downto 0);
-            f      : in  std_logic_vector(3 downto 0);
-            g      : in  std_logic_vector(3 downto 0);
-            h      : in  std_logic_vector(3 downto 0);
-            i      : in  std_logic_vector(3 downto 0);
-            j      : in  std_logic_vector(3 downto 0);
-            class  : out std_logic_vector
-        );
+		generic(
+			CLASS_COUNT_LOG_2 : positive;
+			CLASS_LABEL_BITS  : positive
+		);
+		port(
+			in_clock  : in  std_logic;
+			in_labels : in  std_logic_matrix(0 to (2**CLASS_COUNT_LOG_2)-1)(CLASS_LABEL_BITS-1 downto 0);
+			in_reset  : in  std_logic;
+			out_ready : out std_logic;
+			out_class : out std_logic_vector(CLASS_LABEL_BITS-1 downto 0)
+		);
     end component;
-
-    component DecisionTree
-        port(
-            tree_number  : in  integer;
-            sepal_length : in  std_logic_vector(3 downto 0);
-            sepal_width  : in  std_logic_vector(3 downto 0);
-            petal_length : in  std_logic_vector(3 downto 0);
-            petal_width  : in  std_logic_vector(3 downto 0);
-            class_out    : out std_logic_vector(3 downto 0)
-        );
-    end component;
+    
+    
+    --------------------------
+    --  Signal declaration  --
+    --------------------------
+	
+	signal enableMajorityVote : std_logic := '0';
+	signal decisionTreeReady  : std_logic_vector(0 to TREE_COUNT-1);
+	signal decisionTreeClass  : std_logic_matrix(0 to TREE_COUNT-1)(CLASS_LABEL_BITS-1 downto 0);
+	
+	signal classLabelsPadded : std_logic_matrix(0 to (2**TREE_COUNT)-1)(CLASS_LABEL_BITS-1 downto 0);
+	signal classLabelInverse : std_logic_vector(CLASS_LABEL_BITS-1 downto 0);
 
 begin
-    -- 10 instances of the DT component are called, each given a unique tree_number and the same sl, sw, pl, pw values to calculate their decisions simultaniously
-    -- the calculated decision is then stored in results(tree_number) which will then be used in the majority_vote component.
-    decisionTree0 : DecisionTree port map(tree_number => 0, sepal_length => sepal_length, sepal_width => sepal_width, petal_length => petal_length, petal_width => petal_width, class_out => results(0));
-    decisionTree1 : DecisionTree port map(tree_number => 1, sepal_length => sepal_length, sepal_width => sepal_width, petal_length => petal_length, petal_width => petal_width, class_out => results(1));
-    decisionTree2 : DecisionTree port map(tree_number => 2, sepal_length => sepal_length, sepal_width => sepal_width, petal_length => petal_length, petal_width => petal_width, class_out => results(2));
-    decisionTree3 : DecisionTree port map(tree_number => 3, sepal_length => sepal_length, sepal_width => sepal_width, petal_length => petal_length, petal_width => petal_width, class_out => results(3));
-    decisionTree4 : DecisionTree port map(tree_number => 4, sepal_length => sepal_length, sepal_width => sepal_width, petal_length => petal_length, petal_width => petal_width, class_out => results(4));
-    decisionTree5 : DecisionTree port map(tree_number => 5, sepal_length => sepal_length, sepal_width => sepal_width, petal_length => petal_length, petal_width => petal_width, class_out => results(5));
-    decisionTree6 : DecisionTree port map(tree_number => 6, sepal_length => sepal_length, sepal_width => sepal_width, petal_length => petal_length, petal_width => petal_width, class_out => results(6));
-    decisionTree7 : DecisionTree port map(tree_number => 7, sepal_length => sepal_length, sepal_width => sepal_width, petal_length => petal_length, petal_width => petal_width, class_out => results(7));
-    decisionTree8 : DecisionTree port map(tree_number => 8, sepal_length => sepal_length, sepal_width => sepal_width, petal_length => petal_length, petal_width => petal_width, class_out => results(8));
-    decisionTree9 : DecisionTree port map(tree_number => 9, sepal_length => sepal_length, sepal_width => sepal_width, petal_length => petal_length, petal_width => petal_width, class_out => results(9));
 
-    -- delay used to wait for the calculated decision from each of the 10 decision trees
-    en <= '1' after 3 ns;
-
-    -- within the majority vote component the most frequent decision is calculated and given back as finalresult
-    majorityVote1 : MajorityVote port map(
-        enable => en,
-        a => results(0),
-        b => results(1),
-        c => results(2),
-        d => results(3),
-        e => results(4),
-        f => results(5),
-        g => results(6),
-        h => results(7),
-        i => results(8),
-        j => results(9),
-        class => finalresult
-    );
-
-    class_out <= finalresult;
+	-- Generate decision trees for this random forest.
+	genDecisionTrees:
+	for i in 0 to TREE_COUNT-1 generate
+	
+		decisionTree_1 : DecisionTree
+		generic map(
+			CLASS_LABEL_BITS  => CLASS_LABEL_BITS,
+			FEATURE_BITS      => FEATURE_BITS,
+			FEATURE_ID_BITS   => FEATURE_ID_BITS,
+			FEATURE_ID_COUNT  => FEATURE_ID_COUNT,
+			NODE_ADDRESS_BITS => NODE_ADDRESS_BITS,
+			PATH_TO_ROM_FILE  => PATH_TO_ROM_FILE,
+			TREE_COUNT        => TREE_COUNT,
+			TREE_DEPTH        => TREE_DEPTH,
+			TREE_INDEX        => i
+		)
+		port map(
+			in_features  => in_features,
+			out_ready    => decisionTreeReady(i),
+			out_class    => decisionTreeClass(i)
+		);
+	
+	end generate;
+	
+	-- Majority vote component gets enabled only after all decision trees completed calculation.
+	enableMajorityVote <= (AND decisionTreeReady);
+	
+	-- Store inverse (!) decision tree class labels in class label input array, pad empty elements.
+	--  DT class labels need to be inverse as values 0x00..0 are ignored by the majority vote component.
+	genClassLabelLinks:
+	for i in 0 to (2**TREE_COUNT)-1 generate
+	
+		genMoveDecisionTreeLabels:
+		if (i < TREE_COUNT) generate
+			classLabelsPadded(i) <= decisionTreeClass(i);
+		end generate;
+		
+		genClassLabelPadding:
+		if (i >= TREE_COUNT) generate
+			classLabelsPadded(i) <= (others => '1');
+		end generate;
+	
+	end generate;
+	
+	-- Generate majority vote component and link results.
+	majorityVote_1 : MajorityVote
+	generic map(
+		CLASS_COUNT_LOG_2 => TREE_COUNT, -- FIXME: This should actually be ceil(log_2(TREE_COUNT))
+		CLASS_LABEL_BITS  => CLASS_LABEL_BITS
+	)
+	port map(
+		in_clock  => in_clock AND enableMajorityVote,
+		in_labels => classLabelsPadded,
+		in_reset  => in_reset,
+		out_ready => out_ready,
+		out_class => classLabelInverse
+	);
+	
+	-- Result is the inverse of the suggested class label.
+	out_class <= (NOT classLabelInverse);
 
 end arch;
