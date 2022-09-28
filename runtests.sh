@@ -22,7 +22,7 @@
 
 # Expects VHDL-files (*.vhdl) from anywhere within specified source directory.
 #  Listed files descend the dependency tree in given order.
-SRCS=("randomForestTypes" "randomForest" "majorityVote" "decisionTree" "decisionTreeMemory" "mux_n_bit" "node" "and_n_bit" "comparator_n_bit" "comparator_1_bit" "counter" "pipo" "d_flip_flop")
+SRCS=("randomForest" "majorityVote" "decisionTree" "decisionTreeMemory" "mux_n_bit" "node" "and_n_bit" "comparator_n_bit" "comparator_1_bit" "counter" "pipo" "d_flip_flop" "randomForestTypes")
 
 # Sources root directory
 SRCSDIR="src/vhdl"
@@ -97,7 +97,7 @@ else
     verbose=0
 fi
 
-# Run syntax check and analysis on all files.
+# Run syntax check and analysis on each file.
 printf "\n"
 printf "  ===========================\n"
 printf "  == Building VHDL sources ==\n"
@@ -111,14 +111,8 @@ do
     printf "File \"$SRCSDIR/${SRCS[$i]}.vhdl\"\n"
     
     # These contain arguments to GHDL
-    files="$SRCSDIR/${SRCS[$i]}.vhdl"
+    file="$SRCSDIR/${SRCS[$i]}.vhdl"
     testbenchPath="$SRCSDIR/testbench/${SRCS[$i]}_tb.vhdl"
-
-    # Gather dependencies
-    for (( j = i + 1; j < ${#SRCS[@]}; j++ ))
-    do
-        files="$files $SRCSDIR/${SRCS[$j]}.vhdl"
-    done
     
     # Clear the testbench path if the file does not exist
     if [[ ! -f "$testbenchPath" ]]
@@ -128,11 +122,11 @@ do
     
     # Syntax check
     printf "  Syntax check.. "
-    runGHDL "-s --workdir=$WORKDIR --std=08 $files $testbenchPath" $verbose
+    runGHDL "-s --workdir=$WORKDIR --std=08 $file $testbenchPath" $verbose
     
     # Analysis
     printf "  Analysis..     "
-    runGHDL "-a --workdir=$WORKDIR --std=08 $files $testbenchPath" $verbose
+    runGHDL "-a --workdir=$WORKDIR --std=08 $file $testbenchPath" $verbose
     
     # Build
     printf "  Building..     "
